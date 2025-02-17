@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
-struct Movie_Recommendation_AppApp: App {
+struct Main: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [User.self, Movie.self])  // SwiftData container for User and Movies
     }
 }
