@@ -8,20 +8,18 @@
 import Foundation
 import SwiftData
 
-
-// Movie Entity
 @Model
 final class Movie {
     var title: String
     var genre: String
-    var tmdbID: Int // Unique identifier from OMDP
+    var imdbID: Int // Unique identifier from IMDb
     
     // Link to the User who saved this movie
     var user: User?
     
-    init(title: String, genre: String, tmdbID: Int) {
+    init(title: String, genre: String, imdbID: Int) {
         self.title = title
         self.genre = genre
-        self.tmdbID = tmdbID
+        self.imdbID = imdbID
     }
 }

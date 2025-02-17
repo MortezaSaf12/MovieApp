@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+//Unfinished
 struct Genre: Codable, Identifiable {
     let id: Int
     let name: String

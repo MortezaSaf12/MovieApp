@@ -8,7 +8,6 @@
 import Foundation
 import SwiftData
 
-// User Entity
 @Model
 final class User {
     var name: String

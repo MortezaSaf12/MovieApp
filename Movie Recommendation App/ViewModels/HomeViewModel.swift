@@ -4,6 +4,7 @@
 //
 //  Created by Morteza Safari on 2025-02-09.
 //
+
 import Foundation
 import SwiftUI
 import Observation
@@ -13,19 +14,44 @@ class HomeViewModel {
     var movies: [MovieSearchItem] = []
     var isLoading = false
     var errorMessage: String = ""
+    private var searchTask: Task<Void, Never>?
     
-    func fetchMovies() {
-        isLoading = true
+    func fetchInitialMovies() {
+        
         Task {
-            do {
-                let results = try await APIService.shared.searchMovies(searchTerm: "Batman") //initial default search term
+            await fetchMovies(searchTerm: "Batman")
+        }
+    }
+    
+    func handleSearch(text: String) {
+        guard !text.isEmpty else {
+            movies = []
+            return
+        }
+        
+        searchTask?.cancel()
+        searchTask = Task {
+            guard !Task.isCancelled else { return }
+            await fetchMovies(searchTerm: text)
+        }
+    }
+    
+    func fetchMovies(searchTerm: String) async {
+        isLoading = true
+        
+        do {
+            let results = try await APIService.shared.searchMovies(searchTerm: searchTerm)
+            await MainActor.run {
                 movies = results
                 isLoading = false
-            } catch {
+                errorMessage = ""
+            }
+        } catch {
+            await MainActor.run {
                 errorMessage = error.localizedDescription
                 isLoading = false
+                movies = []
             }
-            
         }
     }
 }

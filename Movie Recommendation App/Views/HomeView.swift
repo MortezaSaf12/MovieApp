@@ -10,34 +10,49 @@ import SwiftUI
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @Environment(\.modelContext) private var context
+    @State private var searchText = ""
     
     let columns = [
         GridItem(.adaptive(minimum: 120), spacing: 16)
     ]
     
     var body: some View {
-        NavigationStack{
-            Group {
-                if viewModel.isLoading {
-                    ProgressView("Loading...")
-                } else if !viewModel.errorMessage.isEmpty {
-                    Text("Error: \(viewModel.errorMessage)")
-                        .foregroundColor(.red)
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(viewModel.movies, id: \.imdbID) { movie in
-                                MovieGridItemView(movie: movie)
+        TabView {
+            NavigationStack {
+                Group {
+                    if viewModel.isLoading {
+                        ProgressView("Loading...")
+                    } else if !viewModel.errorMessage.isEmpty {
+                        Text("Error: \(viewModel.errorMessage)")
+                            .foregroundColor(.red)
+                    } else {
+                        ScrollView {
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                ForEach(viewModel.movies, id: \.imdbID) { movie in
+                                    MovieGridItemView(movie: movie)
+                                }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     }
                 }
+                .navigationTitle("WatchList")
+                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+                .onSubmit(of: .search) {
+                    viewModel.handleSearch(text: searchText)
+                }
             }
-            .navigationTitle("WatchList")
+            .tabItem {
+                Label("Home", systemImage: "house")
+            }
+            
+            WatchListView()
+                .tabItem {
+                    Label("Bookmarks", systemImage: "list.and.film")
+                }
         }
         .onAppear {
-            viewModel.fetchMovies()
+            viewModel.fetchInitialMovies()
         }
     }
 }
@@ -56,7 +71,6 @@ struct MovieGridItemView: View {
                         .resizable()
                         .scaledToFill()
                 case .failure(_):
-                    // fallback
                     Image(systemName: "photo")
                         .resizable()
                         .scaledToFit()
