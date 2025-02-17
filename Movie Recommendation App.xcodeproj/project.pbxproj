@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7E8D2DBD2D636363000CF821 /* SwiftData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E8D2DBC2D636363000CF821 /* SwiftData.framework */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		7EEA4DFC2D5822B8000A3474 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -28,7 +24,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7E8D2DBC2D636363000CF821 /* SwiftData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftData.framework; path = System/Library/Frameworks/SwiftData.framework; sourceTree = SDKROOT; };
 		7EEA4DEB2D5822B7000A3474 /* Movie Recommendation App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Movie Recommendation App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EEA4DFB2D5822B8000A3474 /* Movie Recommendation AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Recommendation AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EEA4E052D5822B8000A3474 /* Movie Recommendation AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Recommendation AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -57,7 +52,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7E8D2DBD2D636363000CF821 /* SwiftData.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,21 +72,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		7E8D2DBB2D636363000CF821 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				7E8D2DBC2D636363000CF821 /* SwiftData.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		7EEA4DE22D5822B7000A3474 = {
 			isa = PBXGroup;
 			children = (
 				7EEA4DED2D5822B7000A3474 /* Movie Recommendation App */,
 				7EEA4DFE2D5822B8000A3474 /* Movie Recommendation AppTests */,
 				7EEA4E082D5822B8000A3474 /* Movie Recommendation AppUITests */,
-				7E8D2DBB2D636363000CF821 /* Frameworks */,
 				7EEA4DEC2D5822B7000A3474 /* Products */,
 			);
 			sourceTree = "<group>";
