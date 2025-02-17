@@ -12,7 +12,7 @@ import Observation
 class HomeViewModel {
     var movies: [MovieSearchItem] = []
     var isLoading = false
-    var errorMessage: String? = nil
+    var errorMessage: String = ""
     
     func fetchMovies() {
         isLoading = true
