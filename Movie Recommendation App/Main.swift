@@ -12,7 +12,7 @@ import SwiftData
 struct Main: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
         }
         .modelContainer(for: [User.self, Movie.self])  // SwiftData container for User and Movies
     }
