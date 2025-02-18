@@ -10,6 +10,7 @@ import SwiftData
 
 struct MovieDetail: Decodable {
     let title: String
+    let year: String
     let genre: String
     let imdbRating: String
     let released: String
@@ -20,6 +21,7 @@ struct MovieDetail: Decodable {
     
     enum CodingKeys: String, CodingKey {
         case title = "Title"
+        case year = "Year"
         case genre = "Genre"
         case imdbRating = "imdbRating"
         case released = "Released"

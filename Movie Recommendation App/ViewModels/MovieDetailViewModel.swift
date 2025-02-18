@@ -6,3 +6,30 @@
 //
 
 import Foundation
+import SwiftUI
+
+@Observable
+class MovieDetailViewModel {
+    var movieDetail: MovieDetail?
+    var isLoading = false
+    var errorMessage: String = ""
+    
+    func fetchMovieDetails(imdbID: String) {
+        isLoading = true
+        
+        Task {
+            do {
+                let detail = try await APIService.shared.fetchMovieDetails(imdbID: imdbID)
+                await MainActor.run {
+                    self.movieDetail = detail
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}

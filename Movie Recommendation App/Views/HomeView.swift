@@ -5,12 +5,15 @@
 //  Created by Morteza Safari on 2025-02-09.
 //
 
+//Testing if commit works
+
 import SwiftUI
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @Environment(\.modelContext) private var context
     @State private var searchText = ""
+    
     
     let columns = [
         GridItem(.adaptive(minimum: 120), spacing: 16)
@@ -29,7 +32,9 @@ struct HomeView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 16) {
                                 ForEach(viewModel.movies, id: \.imdbID) { movie in
-                                    MovieGridItemView(movie: movie)
+                                    NavigationLink(destination: MovieDetailView(imdbID: movie.imdbID)) {
+                                        MovieGridItemView(movie: movie)
+                                    }
                                 }
                             }
                             .padding(.horizontal)
