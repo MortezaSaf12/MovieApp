@@ -5,11 +5,11 @@
 //  Created by Morteza Safari on 2025-02-09.
 //
 
-// WatchListView.swift
+// WatchlistView.swift
 import SwiftUI
 import SwiftData
 
-struct WatchListView: View {
+struct WatchlistView: View {
     @Query(sort: \WatchlistMovie.title) private var watchlistMovies: [WatchlistMovie]
 
     let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
@@ -42,7 +42,7 @@ struct WatchListView: View {
                     }
                 }
             }
-            .navigationTitle("Watchlist")
+            .navigationTitle("Bookmarks")
             .navigationBarTitleDisplayMode(.large)
         }
     }

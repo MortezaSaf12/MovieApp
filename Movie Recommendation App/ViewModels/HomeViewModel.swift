@@ -19,7 +19,7 @@ class HomeViewModel {
     func fetchInitialMovies() {
         
         Task {
-            await fetchMovies(searchTerm: "Batman")
+            await fetchMovies(searchTerm: "2023")
         }
     }
     

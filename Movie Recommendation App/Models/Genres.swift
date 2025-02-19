@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 //Unfinished
-struct Genre: Codable, Identifiable {
+struct Genre: Decodable, Identifiable {
     let id: Int
     let name: String
 }
