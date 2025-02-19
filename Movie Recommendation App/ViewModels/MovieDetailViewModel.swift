@@ -14,7 +14,8 @@ class MovieDetailViewModel {
     var isLoading = false
     var errorMessage: String = ""
     
-    func fetchMovieDetails(imdbID: String) {
+    @MainActor
+    func fetchMovieDetails(imdbID: String) async {
         isLoading = true
         
         Task {

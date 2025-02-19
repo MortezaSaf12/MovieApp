@@ -5,8 +5,6 @@
 //  Created by Morteza Safari on 2025-02-09.
 //
 
-//Testing if commit works
-
 import SwiftUI
 
 struct HomeView: View {

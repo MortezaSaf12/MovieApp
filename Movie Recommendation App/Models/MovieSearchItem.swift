@@ -10,7 +10,7 @@ struct MovieSearchItem: Decodable {
     let title: String
     let year: String
     let imdbID: String
-    let type: String
+    let type: String?
     let poster: String
     
     enum CodingKeys: String, CodingKey {

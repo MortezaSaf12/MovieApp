@@ -14,7 +14,7 @@ struct Main: App {
         WindowGroup {
             HomeView()
         }
-        .modelContainer(for: [User.self, Movie.self])  // SwiftData container for User and Movies
+        .modelContainer(for: WatchlistMovie.self)
     }
 }
 

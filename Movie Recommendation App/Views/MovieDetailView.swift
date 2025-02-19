@@ -6,14 +6,91 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct MovieDetailView: View {
     let imdbID: String
     
     @State private var viewModel = MovieDetailViewModel()
-    @Environment(\.dismiss) private var dismiss
-    
+    @Environment(\.modelContext) private var modelContext
+    @State private var bookmarkTask: Task<Void, Never>?
+
     @State private var isBookmarked = false
+
+    init(imdbID: String, isBookmarked: Bool = false) {
+        self.imdbID = imdbID
+        self._isBookmarked = State(initialValue: isBookmarked)
+    }
+    
+    @MainActor
+    private func checkBookmarkStatus() async {
+        
+        guard let imdbID = viewModel.movieDetail?.imdbID else { return }
+        
+        let descriptor = FetchDescriptor<WatchlistMovie>(
+            predicate: #Predicate { $0.imdbID == imdbID }
+        )
+        
+        do {
+            let count = try modelContext.fetchCount(descriptor)
+            isBookmarked = count > 0
+        } catch {
+            print("Error checking bookmark status: \(error)")
+        }
+    }
+    
+    @MainActor
+    private func addToWatchlist() async{
+        guard let movie = viewModel.movieDetail else { return }
+        let targetIMDbID = movie.imdbID
+        
+        let existingCheck = FetchDescriptor<WatchlistMovie>(
+            predicate: #Predicate { $0.imdbID == targetIMDbID }
+        )
+        
+        do {
+            let existingCount = try modelContext.fetchCount(existingCheck)
+            print("exists?")
+            guard existingCount == 0 else {
+                print("Movie already in watchlist")
+                isBookmarked = true
+                return
+            }
+            
+            let newBookmark = WatchlistMovie(
+                imdbID: targetIMDbID,
+                title: movie.title,
+                year: movie.year,
+                poster: movie.poster
+            )
+            modelContext.insert(newBookmark)
+            print("modelContext.save")
+            try modelContext.save()
+            isBookmarked = true
+        } catch {
+            print("Error saving bookmark: \(error)")
+        }
+    }
+    
+    @MainActor
+    private func removeFromWatchlist() async {
+        guard let imdbID = viewModel.movieDetail?.imdbID else { return }
+        
+        let descriptor = FetchDescriptor<WatchlistMovie>(
+            predicate: #Predicate { $0.imdbID == imdbID }
+        )
+        
+        do {
+            let items = try modelContext.fetch(descriptor)
+            for item in items {
+                modelContext.delete(item)
+            }
+            try modelContext.save()
+            isBookmarked = false
+        } catch {
+            print("Remove failed: \(error)")
+        }
+    }
     
     
     var body: some View {
@@ -44,7 +121,7 @@ struct MovieDetailView: View {
                                     EmptyView()
                                 }
                             }
-
+                            
                             .cornerRadius(8)
                             
                             Text(movie.title)
@@ -90,13 +167,35 @@ struct MovieDetailView: View {
             }
             .navigationTitle("Detail")
             .navigationBarTitleDisplayMode(.inline)
-            
+            .task {
+                await viewModel.fetchMovieDetails(imdbID: imdbID)
+                await checkBookmarkStatus()
+                
+                NotificationCenter.default.addObserver(
+                    forName: .NSManagedObjectContextDidSave,
+                    object: modelContext,
+                    queue: .main
+                ) { _ in
+                    Task {
+                        await checkBookmarkStatus()
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            NotificationCenter.default.removeObserver(self)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    isBookmarked.toggle()
-                } label: {
+                    Task {
+                        if isBookmarked {
+                            await removeFromWatchlist()
+                        } else {
+                            await addToWatchlist()
+                        }
+                    }
+                } label:{
                     //ChatGPT
                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                         .font(.title)
@@ -105,10 +204,6 @@ struct MovieDetailView: View {
                         .frame(width: 30) // Optional: Only apply a width frame
                 }
             }
-        }
-        
-        .onAppear {
-            viewModel.fetchMovieDetails(imdbID: imdbID)
         }
     }
 }
