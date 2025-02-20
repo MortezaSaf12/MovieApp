@@ -12,6 +12,7 @@ struct HomeView: View {
     @Environment(\.modelContext) private var context
     @State private var searchText = ""
     
+    @State private var selectedGenre: String = "All"
     
     let columns = [
         GridItem(.adaptive(minimum: 120), spacing: 16)
@@ -21,34 +22,39 @@ struct HomeView: View {
         TabView {
             NavigationStack {
                 VStack(alignment: .leading, spacing: 0) {
+                    
+                    // only UI for now, implement logic later
                     HStack {
+                        Spacer()
+                        Text("Select Genre: ")
                         Menu {
-                            Button("Action") {  }
-                            Button("Adventure") {  }
-                            Button("Comedy") {  }
-                            Button("Crime") {  }
-                            Button("Drama") {  }
-                            Button("Fantasy") {  }
-                            Button("Horror") {  }
-                            Button("Romance") {  }
-                            Button("Sci-Fi") {  }
-                            Button("Thriller") { }
+                            Button("All") { selectedGenre = "All" }
+                            Button("Action") { selectedGenre = "Action" }
+                            Button("Adventure") { selectedGenre = "Adventure" }
+                            Button("Comedy") { selectedGenre = "Comedy" }
+                            Button("Crime") { selectedGenre = "Crime" }
+                            Button("Drama") { selectedGenre = "Drama" }
+                            Button("Fantasy") { selectedGenre = "Fantasy" }
+                            Button("Horror") { selectedGenre = "Horror" }
+                            Button("Romance") { selectedGenre = "Romance" }
+                            Button("Sci-Fi") { selectedGenre = "Sci-Fi" }
+                            Button("Thriller") { selectedGenre = "Thriller" }
                         } label: {
-                            Text("Genre")
+                            Text(selectedGenre)
                                 .foregroundColor(.primary)
                                 .padding(.vertical, 4)
-                                .padding(.horizontal, 140)
+                                .padding(.horizontal, 40)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
                                         .stroke(Color.gray.opacity(0.7), lineWidth: 1)
                                 )
-                            
                         }
+                        Spacer()
                     }
-                    .padding(.horizontal, 32)
-                    
                     .padding(.top, 2)
                     .padding(.bottom, 12)
+                    
+                    
                     Group {
                         if viewModel.isLoading {
                             ProgressView("Loading...")
