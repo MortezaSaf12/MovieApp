@@ -69,21 +69,21 @@ struct WatchlistView: View {
                     }
                 }
             }
-        }
-        .navigationTitle("Bookmarks")
-        .navigationBarTitleDisplayMode(.large)
-        .task {
-            viewModel.modelContext = modelContext
-            viewModel.fetchMovies()
-            
-            NotificationCenter.default.addObserver(
-                forName: .NSManagedObjectContextDidSave,
-                object: modelContext,
-                queue: .main
-            ) { _ in
-                Task {
-                    await MainActor.run {
-                        viewModel.fetchMovies()
+            .navigationTitle("Bookmarks")
+            .navigationBarTitleDisplayMode(.large)
+            .task {
+                viewModel.modelContext = modelContext
+                viewModel.fetchMovies()
+                
+                NotificationCenter.default.addObserver(
+                    forName: .NSManagedObjectContextDidSave,
+                    object: modelContext,
+                    queue: .main
+                ) { _ in
+                    Task {
+                        await MainActor.run {
+                            viewModel.fetchMovies()
+                        }
                     }
                 }
             }

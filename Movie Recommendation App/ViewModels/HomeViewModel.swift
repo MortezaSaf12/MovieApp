@@ -43,6 +43,17 @@ class HomeViewModel {
         
         do {
             let results = try await APIService.shared.searchMovies(searchTerm: searchTerm)
+            
+            if selectedGenre == "All"{
+                await MainActor.run {
+                    movies = results
+                    isLoading = false
+                    errorMessage = "error due to genre selection"
+                }
+            } else {
+               // more logic coming
+            }
+            
             await MainActor.run {
                 movies = results
                 isLoading = false
