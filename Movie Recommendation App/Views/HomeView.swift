@@ -12,11 +12,7 @@ struct HomeView: View {
     @Environment(\.modelContext) private var context
     @State private var searchText = ""
     
-    @State private var selectedGenre: String = "All"
-    
-    let columns = [
-        GridItem(.adaptive(minimum: 120), spacing: 16)
-    ]
+    let columns = [GridItem(.adaptive(minimum: 120), spacing: 16)]
     
     var body: some View {
         TabView {
@@ -28,19 +24,13 @@ struct HomeView: View {
                         Spacer()
                         Text("Select Genre: ")
                         Menu {
-                            Button("All") { selectedGenre = "All" }
-                            Button("Action") { selectedGenre = "Action" }
-                            Button("Adventure") { selectedGenre = "Adventure" }
-                            Button("Comedy") { selectedGenre = "Comedy" }
-                            Button("Crime") { selectedGenre = "Crime" }
-                            Button("Drama") { selectedGenre = "Drama" }
-                            Button("Fantasy") { selectedGenre = "Fantasy" }
-                            Button("Horror") { selectedGenre = "Horror" }
-                            Button("Romance") { selectedGenre = "Romance" }
-                            Button("Sci-Fi") { selectedGenre = "Sci-Fi" }
-                            Button("Thriller") { selectedGenre = "Thriller" }
+                            ForEach(viewModel.genres, id: \.self) { genre in
+                                Button(genre) {
+                                    viewModel.selectedGenre = genre
+                                }
+                            }
                         } label: {
-                            Text(selectedGenre)
+                            Text(viewModel.selectedGenre)
                                 .foregroundColor(.primary)
                                 .padding(.vertical, 4)
                                 .padding(.horizontal, 40)

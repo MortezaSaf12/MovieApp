@@ -16,8 +16,10 @@ class HomeViewModel {
     var errorMessage: String = ""
     private var searchTask: Task<Void, Never>?
     
+    var selectedGenre: String = "All"
+    let genres = ["All", "Action", "Adventure", "Comedy", "Crime", "Drama", "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"]
+    
     func fetchInitialMovies() {
-        
         Task {
             await fetchMovies(searchTerm: "2023")
         }
