@@ -14,11 +14,13 @@ final class WatchlistMovie {
     var title: String
     var year: String
     var poster: String
-    
-    init(imdbID: String, title: String, year: String, poster: String) {
+    var posterData: Data?
+
+    init(imdbID: String, title: String, year: String, poster: String, posterData: Data? = nil) {
         self.imdbID = imdbID
         self.title = title
         self.year = year
         self.poster = poster
+        self.posterData = posterData
     }
 }

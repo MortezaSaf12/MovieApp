@@ -25,7 +25,7 @@ class MovieDetailViewModel {
     @MainActor
     func checkBookmarkStatus(imdbID: String) async {
         guard let modelContext else { return }
-
+        
         let descriptor = FetchDescriptor<WatchlistMovie>(
             predicate: #Predicate { $0.imdbID == imdbID }
         )
@@ -54,11 +54,22 @@ class MovieDetailViewModel {
                 return
             }
             
+            var posterData: Data? = nil
+            if let posterURL = URL(string: movie.poster) {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: posterURL)
+                    posterData = data
+                } catch {
+                    print("Error downloading poster: \(error)")
+                }
+            }
+            
             let newBookmark = WatchlistMovie(
                 imdbID: targetIMDbID,
                 title: movie.title,
                 year: movie.year,
-                poster: movie.poster
+                poster: movie.poster,
+                posterData: posterData
             )
             modelContext.insert(newBookmark)
             try modelContext.save()
@@ -71,7 +82,7 @@ class MovieDetailViewModel {
     @MainActor
     func removeFromWatchlist(imdbID: String) async {
         guard let modelContext else { return }
-
+        
         let descriptor = FetchDescriptor<WatchlistMovie>(
             predicate: #Predicate { $0.imdbID == imdbID }
         )

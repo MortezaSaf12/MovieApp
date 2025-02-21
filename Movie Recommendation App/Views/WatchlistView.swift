@@ -10,14 +10,14 @@ import SwiftUI
 import SwiftData
 
 struct WatchlistView: View {
-    @Query(sort: \WatchlistMovie.title) private var watchlistMovies: [WatchlistMovie]
-
+    @Environment(\.modelContext) private var modelContext
+    @State private var viewModel = WatchlistViewModel()
     let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
     
     var body: some View {
         NavigationStack {
             Group {
-                if watchlistMovies.isEmpty {
+                if viewModel.watchlistMovies.isEmpty {
                     ContentUnavailableView(
                         "No Bookmarks",
                         systemImage: "bookmark.slash",
@@ -26,15 +26,42 @@ struct WatchlistView: View {
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(watchlistMovies) { movie in
-                                NavigationLink(destination: MovieDetailView(imdbID: movie.imdbID, isBookmarked: true)) {
-                                    MovieGridItemView(movie: MovieSearchItem(
-                                        title: movie.title,
-                                        year: movie.year,
-                                        imdbID: movie.imdbID,
-                                        type: nil,
-                                        poster: movie.poster
-                                    ))
+                            ForEach(viewModel.watchlistMovies) { movie in
+                                NavigationLink(destination: MovieDetailView(imdbID: movie.imdbID, isBookmarked: true)
+                                ) {
+                                    VStack {
+                                        if let data = movie.posterData, let image = UIImage(data: data) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(height: 200)
+                                                .clipped()
+                                        } else {
+                                            AsyncImage(url: URL(string: movie.poster)) { phase in
+                                                switch phase {
+                                                case .empty:
+                                                    ProgressView()
+                                                case .success(let image):
+                                                    image
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(height: 200)
+                                                        .clipped()
+                                                case .failure:
+                                                    Image(systemName: "photo")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(height: 200)
+                                                        .foregroundColor(.gray)
+                                                    
+                                                @unknown default:
+                                                    EmptyView()
+                                                }
+                                            }
+                                        }
+                                        Text(movie.title)
+                                            .lineLimit(1)
+                                    }
                                 }
                             }
                         }
@@ -42,8 +69,34 @@ struct WatchlistView: View {
                     }
                 }
             }
-            .navigationTitle("Bookmarks")
-            .navigationBarTitleDisplayMode(.large)
+        }
+        .navigationTitle("Bookmarks")
+        .navigationBarTitleDisplayMode(.large)
+        .task {
+            viewModel.modelContext = modelContext
+            viewModel.fetchMovies()
+            
+            NotificationCenter.default.addObserver(
+                forName: .NSManagedObjectContextDidSave,
+                object: modelContext,
+                queue: .main
+            ) { _ in
+                Task {
+                    await MainActor.run {
+                        viewModel.fetchMovies()
+                    }
+                }
+            }
+        }
+        .onAppear {
+            viewModel.fetchMovies()
+        }
+        .onDisappear {
+            NotificationCenter.default.removeObserver(self)
+        }
+        .onChange(of: modelContext) { newContext, _ in
+            viewModel.modelContext = newContext
+            viewModel.fetchMovies()
         }
     }
 }

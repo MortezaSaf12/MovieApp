@@ -6,3 +6,21 @@
 //
 
 import Foundation
+import SwiftData
+
+@MainActor
+@Observable
+class WatchlistViewModel {
+    var watchlistMovies: [WatchlistMovie] = []
+    var modelContext: ModelContext?
+    
+    func fetchMovies() {
+        guard let modelContext else { return }
+        let descriptor = FetchDescriptor<WatchlistMovie>(sortBy: [SortDescriptor(\.title)])
+        do {
+            watchlistMovies = try modelContext.fetch(descriptor)
+        } catch {
+            print("Error fetching watchlist: \(error)")
+        }
+    }
+}
