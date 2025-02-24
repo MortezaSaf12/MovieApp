@@ -10,6 +10,37 @@ import SwiftData
 
 struct MovieDetail: Decodable {
     let title: String
+    let releaseDate: String
+    let genres: [Genre]
+    let voteAverage: Double
+    let overview: String
+    let runtime: Int
+    let posterPath: String?
+    let id: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case title
+        case releaseDate = "release_date"
+        case genres
+        case voteAverage = "vote_average"
+        case overview
+        case runtime
+        case posterPath = "poster_path"
+        case id
+    }
+    
+    struct Genre: Decodable, Identifiable {
+        let id: Int
+        let name: String
+    }
+    
+}
+
+
+
+/*
+struct MovieDetail: Decodable {
+    let title: String
     let year: String
     let genre: String
     let imdbRating: String
@@ -31,3 +62,4 @@ struct MovieDetail: Decodable {
         case imdbID = "imdbID"
     }
 }
+*/
