@@ -10,12 +10,12 @@ import SwiftData
 
 struct MovieDetailView: View {
     
-    let imdbID: String
+    let movieID: Int
     @Environment(\.modelContext) private var modelContext
     private var viewModel: MovieDetailViewModel
     
-    init(imdbID: String, isBookmarked: Bool = false) {
-        self.imdbID = imdbID
+    init(movieID: Int, isBookmarked: Bool = false) {
+        self.movieID = movieID
         self.viewModel = MovieDetailViewModel(isBookmarked: isBookmarked)
     }
     
@@ -28,25 +28,7 @@ struct MovieDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             
-                            AsyncImage(url: URL(string: movie.poster)) { phase in
-                                switch phase {
-                                case .empty:
-                                    ProgressView()
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(maxWidth: .infinity)
-                                        .clipped()
-                                case .failure(_):
-                                    Image(systemName: "photo")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .foregroundColor(.gray)
-                                @unknown default:
-                                    EmptyView()
-                                }
-                            }
+                            ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath))
                             
                             .cornerRadius(8)
                             
@@ -55,10 +37,10 @@ struct MovieDetailView: View {
                                 .bold()
                             
                             HStack {
-                                Text("\(movie.runtime)")
+                                Text("\(movie.runtime) min")
                                     .font(.subheadline)
                                 Spacer()
-                                Text("\(movie.imdbRating) (IMDb)")
+                                Text("\(String(format: "%.1f", movie.voteAverage)) ★")
                                     .font(.subheadline)
                             }
                             .foregroundColor(.secondary)
@@ -66,11 +48,11 @@ struct MovieDetailView: View {
                             Text("About Movie")
                                 .font(.headline)
                             
-                            Text(movie.plot)
+                            Text(movie.overview)
                                 .font(.body)
                                 .foregroundColor(.primary)
                             
-                            NavigationLink(destination: ReviewsView(imdbID: movie.imdbID)) {
+                            NavigationLink(destination: ReviewsView(movieID: movie.id)) {
                                 Text("See reviews")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
@@ -95,8 +77,8 @@ struct MovieDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 viewModel.modelContext = modelContext
-                await viewModel.fetchMovieDetails(imdbID: imdbID)
-                await viewModel.checkBookmarkStatus(imdbID: imdbID)
+                await viewModel.fetchMovieDetails(movieID: movieID)
+                await viewModel.checkBookmarkStatus(movieID: movieID)
                 
                 NotificationCenter.default.addObserver(
                     forName: .NSManagedObjectContextDidSave,
@@ -104,7 +86,7 @@ struct MovieDetailView: View {
                     queue: .main
                 ) { _ in
                     Task {
-                        await viewModel.checkBookmarkStatus(imdbID: imdbID)
+                        await viewModel.checkBookmarkStatus(movieID: movieID)
                     }
                 }
             }
@@ -117,7 +99,7 @@ struct MovieDetailView: View {
                 Button {
                     Task { @MainActor in
                         if viewModel.isBookmarked {
-                            await viewModel.removeFromWatchlist(imdbID: imdbID)
+                            await viewModel.removeFromWatchlist(movieID: movieID)
                         } else if let movie = viewModel.movieDetail {
                             await viewModel.addToWatchlist(movie: movie)
                         }

@@ -32,7 +32,7 @@ struct MovieSearchResponse: Decodable {
 
 
 
-/*
+/*old code under here
 // "?s=<searchTerm>" ((retrieves partial data))
 struct MovieSearchItem: Decodable {
     let title: String

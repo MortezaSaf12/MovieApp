@@ -23,11 +23,11 @@ class MovieDetailViewModel {
     }
     
     @MainActor
-    func checkBookmarkStatus(imdbID: String) async {
+    func checkBookmarkStatus(movieID: Int) async {
         guard let modelContext else { return }
         
         let descriptor = FetchDescriptor<WatchlistMovie>(
-            predicate: #Predicate { $0.imdbID == imdbID }
+            predicate: #Predicate { $0.id == movieID }
         )
         
         do {
@@ -41,10 +41,10 @@ class MovieDetailViewModel {
     @MainActor
     func addToWatchlist(movie: MovieDetail) async {
         guard let modelContext else { return }
-        let targetIMDbID = movie.imdbID
+        let targetMovieID = movie.id
         
         let existingCheck = FetchDescriptor<WatchlistMovie>(
-            predicate: #Predicate { $0.imdbID == targetIMDbID }
+            predicate: #Predicate { $0.id == targetMovieID }
         )
         
         do {
@@ -55,7 +55,7 @@ class MovieDetailViewModel {
             }
             
             var posterData: Data? = nil
-            if let posterURL = URL(string: movie.poster) {
+            if let posterPath = movie.posterPath, let posterURL = APIService.shared.fullPosterURL(for: posterPath) {
                 do {
                     let (data, _) = try await URLSession.shared.data(from: posterURL)
                     posterData = data
@@ -65,10 +65,10 @@ class MovieDetailViewModel {
             }
             
             let newBookmark = WatchlistMovie(
-                imdbID: targetIMDbID,
+                id: targetMovieID,
                 title: movie.title,
-                year: movie.year,
-                poster: movie.poster,
+                releaseDate: movie.releaseDate,
+                posterPath: movie.posterPath ?? "",
                 posterData: posterData
             )
             modelContext.insert(newBookmark)
@@ -80,11 +80,11 @@ class MovieDetailViewModel {
     }
     
     @MainActor
-    func removeFromWatchlist(imdbID: String) async {
+    func removeFromWatchlist(movieID: Int) async {
         guard let modelContext else { return }
         
         let descriptor = FetchDescriptor<WatchlistMovie>(
-            predicate: #Predicate { $0.imdbID == imdbID }
+            predicate: #Predicate { $0.id == movieID }
         )
         
         do {
@@ -100,12 +100,12 @@ class MovieDetailViewModel {
     }
     
     @MainActor
-    func fetchMovieDetails(imdbID: String) async {
+    func fetchMovieDetails(movieID: Int) async {
         isLoading = true
         
         Task {
             do {
-                let detail = try await APIService.shared.fetchMovieDetails(imdbID: imdbID)
+                let detail = try await APIService.shared.fetchMovieDetails(movieID: movieID)
                 await MainActor.run {
                     self.movieDetail = detail
                     self.isLoading = false

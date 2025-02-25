@@ -21,7 +21,7 @@ class HomeViewModel {
     
     func fetchInitialMovies() {
         Task {
-            await fetchMovies(searchTerm: "2023")
+            await fetchMovies(searchTerm: "popular") // implememt showing popular movies later, just making it work for now.
         }
     }
     
@@ -44,20 +44,21 @@ class HomeViewModel {
         do {
             let results = try await APIService.shared.searchMovies(searchTerm: searchTerm)
             
-            if selectedGenre == "All"{
+            if selectedGenre == "All" {
                 await MainActor.run {
                     movies = results
                     isLoading = false
-                    errorMessage = "error due to genre selection"
+                    errorMessage = ""
                 }
             } else {
-               // more logic coming
-            }
-            
-            await MainActor.run {
-                movies = results
-                isLoading = false
-                errorMessage = ""
+                
+                let filteredMovies = await filterMoviesByGenre(movies: results, genre: selectedGenre)
+                
+                await MainActor.run {
+                    movies = filteredMovies
+                    isLoading = false
+                    errorMessage = filteredMovies.isEmpty ? "No movies found for selected genre" : ""
+                }
             }
         } catch {
             await MainActor.run {
@@ -66,5 +67,18 @@ class HomeViewModel {
                 movies = []
             }
         }
+    }
+    
+    private func filterMoviesByGenre(movies: [MovieSearchItem], genre: String) async -> [MovieSearchItem] {
+        var filteredResults: [MovieSearchItem] = []
+        
+        for movie in movies {
+            if let movieDetail = try? await APIService.shared.fetchMovieDetails(movieID: movie.id),
+               movieDetail.genres.contains(where: { $0.name == genre }) {
+                filteredResults.append(movie)
+            }
+        }
+        
+        return filteredResults
     }
 }

@@ -38,7 +38,7 @@ struct MovieDetail: Decodable {
 
 
 
-/*
+/* old code under here
 struct MovieDetail: Decodable {
     let title: String
     let year: String

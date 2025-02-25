@@ -27,7 +27,7 @@ struct WatchlistView: View {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(viewModel.watchlistMovies) { movie in
-                                NavigationLink(destination: MovieDetailView(imdbID: movie.imdbID, isBookmarked: true)
+                                NavigationLink(destination: MovieDetailView(movieID: movie.id, isBookmarked: true)
                                 ) {
                                     VStack {
                                         if let data = movie.posterData, let image = UIImage(data: data) {
@@ -36,28 +36,9 @@ struct WatchlistView: View {
                                                 .scaledToFit()
                                                 .frame(height: 200)
                                                 .clipped()
+                                                .cornerRadius(8)
                                         } else {
-                                            AsyncImage(url: URL(string: movie.poster)) { phase in
-                                                switch phase {
-                                                case .empty:
-                                                    ProgressView()
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(height: 200)
-                                                        .clipped()
-                                                case .failure:
-                                                    Image(systemName: "photo")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(height: 200)
-                                                        .foregroundColor(.gray)
-                                                    
-                                                @unknown default:
-                                                    EmptyView()
-                                                }
-                                            }
+                                            ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath), height: 200)
                                         }
                                         Text(movie.title)
                                             .lineLimit(1)

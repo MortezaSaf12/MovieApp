@@ -19,7 +19,6 @@ struct HomeView: View {
             NavigationStack {
                 VStack(alignment: .leading, spacing: 0) {
                     
-                    // only UI for now, implement logic later
                     HStack {
                         Spacer()
                         Text("Select Genre: ")
@@ -54,8 +53,8 @@ struct HomeView: View {
                         } else {
                             ScrollView {
                                 LazyVGrid(columns: columns, spacing: 16) {
-                                    ForEach(viewModel.movies, id: \.imdbID) { movie in
-                                        NavigationLink(destination: MovieDetailView(imdbID: movie.imdbID)) {
+                                    ForEach(viewModel.movies, id: \.id) { movie in
+                                        NavigationLink(destination: MovieDetailView(movieID: movie.id)) {
                                             MovieGridItemView(movie: movie)
                                         }
                                     }
@@ -68,6 +67,13 @@ struct HomeView: View {
                     .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
                     .onSubmit(of: .search) {
                         viewModel.handleSearch(text: searchText)
+                    }
+                    .onChange(of: viewModel.selectedGenre) {
+                        if !searchText.isEmpty {
+                            viewModel.handleSearch(text: searchText)
+                        } else {
+                            viewModel.fetchInitialMovies()
+                        }
                     }
                 }
             }
@@ -91,23 +97,7 @@ struct MovieGridItemView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            AsyncImage(url: URL(string: movie.poster)) { phase in
-                switch phase {
-                case .empty:
-                    ProgressView()
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure(_):
-                    Image(systemName: "photo")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundColor(.gray)
-                @unknown default:
-                    EmptyView()
-                }
-            }
+            ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath), maxWidth: 120, height: 180)
             .frame(width: 120, height: 180)
             .cornerRadius(8)
             
@@ -117,7 +107,7 @@ struct MovieGridItemView: View {
                 .lineLimit(1)
                 .frame(maxWidth: 120)
             
-            Text("(\(movie.year))")
+            Text("(\(String(movie.releaseDate.prefix(4))))")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
