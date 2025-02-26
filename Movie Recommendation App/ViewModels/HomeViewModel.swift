@@ -17,11 +17,24 @@ class HomeViewModel {
     private var searchTask: Task<Void, Never>?
     
     var selectedGenre: String = "All"
-    let genres = ["All", "Action", "Adventure", "Comedy", "Crime", "Drama", "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"]
+    let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller", "War", "Western"]
     
     func fetchInitialMovies() {
         Task {
-            await fetchMovies(searchTerm: "popular") // implememt showing popular movies later, just making it work for now.
+            do {
+                let results = try await APIService.shared.fetchPopularMovies()
+                await MainActor.run {
+                    movies = results
+                    isLoading = false
+                    errorMessage = ""
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                    movies = []
+                }
+            }
         }
     }
     
