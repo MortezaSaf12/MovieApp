@@ -65,7 +65,7 @@ struct HomeView: View {
                     }
                     .navigationTitle("WatchList")
                     .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
-                    .onSubmit(of: .search) {
+                    .onChange(of: searchText) {
                         viewModel.handleSearch(text: searchText)
                     }
                     .onChange(of: viewModel.selectedGenre) {

@@ -40,7 +40,7 @@ class HomeViewModel {
     
     func handleSearch(text: String) {
         guard !text.isEmpty else {
-            movies = []
+            fetchInitialMovies()
             return
         }
         
