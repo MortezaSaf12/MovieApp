@@ -33,33 +33,4 @@ struct MovieDetail: Decodable {
         let id: Int
         let name: String
     }
-    
 }
-
-
-
-/* old code under here
-struct MovieDetail: Decodable {
-    let title: String
-    let year: String
-    let genre: String
-    let imdbRating: String
-    let released: String
-    let plot: String
-    let runtime: String
-    let poster: String
-    let imdbID: String
-    
-    enum CodingKeys: String, CodingKey {
-        case title = "Title"
-        case year = "Year"
-        case genre = "Genre"
-        case imdbRating = "imdbRating"
-        case released = "Released"
-        case plot = "Plot"
-        case runtime = "Runtime"
-        case poster = "Poster"
-        case imdbID = "imdbID"
-    }
-}
-*/

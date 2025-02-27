@@ -10,17 +10,17 @@ import SwiftData
 
 @Model
 final class WatchlistMovie {
-    var id: Int //var imdbID: String
+    var id: Int
     var title: String
-    var releaseDate: String  // previously year: String
-    var posterPath: String  // previously poster: String
+    var releaseDate: String
+    var posterPath: String
     var posterData: Data?
 
-    init(id: Int, title: String, releaseDate: String, posterPath: String, posterData: Data? = nil) { // previously init(imdbID: String, title: String, year: String, poster: String, posterData: Data? = nil) {
-        self.id = id // previously self.imdbID = imdbID
+    init(id: Int, title: String, releaseDate: String, posterPath: String, posterData: Data? = nil) {
+        self.id = id
         self.title = title
-        self.releaseDate = releaseDate //previously self.year = year
-        self.posterPath = posterPath // previously self.poster = poster
+        self.releaseDate = releaseDate
+        self.posterPath = posterPath
         self.posterData = posterData
     }
 }
