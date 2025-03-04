@@ -6,7 +6,7 @@
 //
 
 
-struct MovieSearchItem: Decodable {
+struct MovieSearchItem: Decodable, Identifiable {
     let id: Int
     let title: String
     let releaseDate: String

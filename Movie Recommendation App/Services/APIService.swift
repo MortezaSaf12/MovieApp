@@ -25,14 +25,13 @@ class APIService {
         return searchResponse.results ?? []
     }
     
-    func fetchPopularMovies() async throws -> [MovieSearchItem] {
-        guard let url = URL(string: "\(baseURL)/movie/popular?api_key=\(apiKey)") else {
+    func fetchPopularMovies(page: Int = 1) async throws -> [MovieSearchItem] {
+        guard let url = URL(string: "\(baseURL)/movie/popular?api_key=\(apiKey)&page=\(page)") else {
             throw URLError(.badURL)
         }
         
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
-        
         return response.results ?? []
     }
     
@@ -59,5 +58,16 @@ class APIService {
     func fullPosterURL(for posterPath: String?) -> URL? {
         guard let posterPath = posterPath else { return nil }
         return URL(string: "\(imageBaseURL)\(posterPath)")
+    }
+    
+    // Fetch similar movies from the TMDb API
+    func fetchSimilarMovies(movieID: Int) async throws -> [MovieSearchItem] {
+        guard let url = URL(string: "\(baseURL)/movie/\(movieID)/similar?api_key=\(apiKey)") else {
+            throw URLError(.badURL)
+        }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
+        return response.results ?? []
     }
 }

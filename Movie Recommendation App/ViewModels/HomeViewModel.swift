@@ -8,23 +8,33 @@
 import Foundation
 import SwiftUI
 import Observation
+import SwiftData
 
 @Observable
 class HomeViewModel {
     var movies: [MovieSearchItem] = []
+    var recommendations: [MovieSearchItem] = []
     var isLoading = false
     var errorMessage: String = ""
-    private var searchTask: Task<Void, Never>?
-    
     var selectedGenre: String = "All"
-    let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller", "War", "Western"]
+    
+    private var searchTask: Task<Void, Never>?
+    private var watchlistMovies: [WatchlistMovie] = []
+    
+    let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime",
+                  "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
+                  "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller",
+                  "War", "Western"]
     
     func fetchInitialMovies() {
         Task {
             do {
-                let results = try await APIService.shared.fetchPopularMovies()
+                let page1 = try await APIService.shared.fetchPopularMovies(page: 1)
+                let page2 = try await APIService.shared.fetchPopularMovies(page: 2)
+                let combinedResults = page1 + page2
+                
                 await MainActor.run {
-                    movies = results
+                    movies = combinedResults
                     isLoading = false
                     errorMessage = ""
                 }
@@ -93,5 +103,45 @@ class HomeViewModel {
         }
         
         return filteredResults
+    }
+    
+    @MainActor
+    func fetchRecommendations(context: ModelContext) async {
+        
+        let descriptor = FetchDescriptor<WatchlistMovie>()
+        do {
+            watchlistMovies = try context.fetch(descriptor)
+        } catch {
+            print("Failed to fetch watchlist: \(error)")
+            return
+        }
+        
+        guard !watchlistMovies.isEmpty else {
+            await MainActor.run { recommendations = [] }
+            return
+        }
+        
+        var allSimilar: [MovieSearchItem] = []
+        
+        for movie in watchlistMovies {
+            do {
+                let similar = try await APIService.shared.fetchSimilarMovies(movieID: movie.id)
+                allSimilar.append(contentsOf: similar)
+            } catch {
+                print("Failed to fetch similar for \(movie.id): \(error)")
+            }
+        }
+        
+        // Check for duplicates and excldue movies that are already in Bookmark
+        let watchlistIDs = Set(watchlistMovies.map { $0.id })
+        var seenIDs = Set<Int>()
+        
+        let uniqueRecommendations = allSimilar
+            .filter { !watchlistIDs.contains($0.id) }
+            .filter { seenIDs.insert($0.id).inserted }
+        
+        await MainActor.run {
+            recommendations = Array(uniqueRecommendations.prefix(20))
+        }
     }
 }
