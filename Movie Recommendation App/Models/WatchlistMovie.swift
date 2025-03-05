@@ -15,6 +15,8 @@ final class WatchlistMovie {
     var releaseDate: String
     var posterPath: String
     var posterData: Data?
+    
+    @Relationship(inverse: \UserPreferences.watchlist) var user: UserPreferences?
 
     init(id: Int, title: String, releaseDate: String, posterPath: String, posterData: Data? = nil) {
         self.id = id

@@ -23,7 +23,8 @@ class HomeViewModel {
     
     private var searchTask: Task<Void, Never>?
     private var watchlistMovies: [WatchlistMovie] = []
-    
+    private var userPrefs: UserPreferences?
+
     
     let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime",
                   "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
@@ -111,6 +112,8 @@ class HomeViewModel {
     
     @MainActor
     func fetchRecommendations(context: ModelContext) async {
+        let userPrefs = (try? context.fetch(FetchDescriptor<UserPreferences>()).first) ?? UserPreferences()
+        
         let descriptor = FetchDescriptor<WatchlistMovie>()
         do {
             watchlistMovies = try context.fetch(descriptor)
@@ -141,12 +144,36 @@ class HomeViewModel {
             }
         }
         
-        // Check for duplicates and excldue movies that are already in Bookmark
+        // Deduplicate
         let watchlistIDs = Set(watchlistMovies.map { $0.id })
         var seenIDs = Set<Int>()
         let uniqueRecommendations = allSimilar
             .filter { !watchlistIDs.contains($0.id) }
             .filter { seenIDs.insert($0.id).inserted }
+        
+        // User preference recommendation
+        var filteredMovies: [MovieSearchItem] = []
+            await withTaskGroup(of: MovieSearchItem?.self) { group in
+                for movie in uniqueRecommendations {
+                    group.addTask { [weak self] in
+                        guard let self = self else { return nil }
+                        do {
+                            let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
+                            let meetsRating = detail.voteAverage >= userPrefs.minRating
+                            let hasFavoriteGenre = userPrefs.favoriteGenres.isEmpty ||
+                                detail.genres.contains { userPrefs.favoriteGenres.contains($0.name) }
+                            return (meetsRating && hasFavoriteGenre) ? movie : nil
+                        } catch {
+                            return nil
+                        }
+                    }
+                }
+                for await result in group {
+                    if let validMovie = result {
+                        filteredMovies.append(validMovie)
+                    }
+                }
+            }
         
         recommendations = Array(uniqueRecommendations.prefix(20))
         

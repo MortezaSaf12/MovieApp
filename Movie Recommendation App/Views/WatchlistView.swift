@@ -51,6 +51,15 @@ struct WatchlistView: View {
             }
             .navigationTitle("Bookmarks")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
+            }
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.fetchMovies()
