@@ -38,6 +38,11 @@ struct HomeView: View {
                         viewModel.fetchInitialMovies()
                     }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)) { _ in
+                    Task {
+                        await viewModel.fetchRecommendations(context: context)
+                    }
+                }
             }
             .tabItem {
                 Label("Home", systemImage: "house")
@@ -90,7 +95,8 @@ struct HomeView: View {
                 HStack(spacing: 16) {
                     ForEach(movies) { movie in
                         NavigationLink(destination: MovieDetailView(movieID: movie.id)) {
-                            MovieGridItemView(movie: movie)
+                            MovieGridItemView(movie: movie,
+                                                imageData: viewModel.recommendationImages[movie.id])
                                 .frame(width: 120)
                         }
                     }
@@ -103,12 +109,20 @@ struct HomeView: View {
 
 struct MovieGridItemView: View {
     let movie: MovieSearchItem
+    var imageData: Data? = nil
     
     var body: some View {
         VStack(spacing: 8) {
-            ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath),
-                            maxWidth: 120,
-                            height: 180)
+            if let data = imageData, let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 180)
+            } else {
+                ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath),
+                                 maxWidth: 120,
+                                 height: 180)
+            }
             
             Text(movie.title)
                 .font(.caption)
@@ -116,12 +130,13 @@ struct MovieGridItemView: View {
                 .lineLimit(1)
                 .frame(maxWidth: 120)
             
-            Text("(\(String(movie.releaseDate.prefix(4)))")
+            Text("(\(String(movie.releaseDate.prefix(4))))")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
     }
 }
+
 
 #Preview {
     HomeView()

@@ -70,4 +70,13 @@ class APIService {
         let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
         return response.results ?? []
     }
+    
+
+
+    func fetchImageData(from url: URL) async throws -> Data {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return data
+    }
+
+    
 }

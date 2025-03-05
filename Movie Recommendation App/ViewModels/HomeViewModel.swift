@@ -10,6 +10,7 @@ import SwiftUI
 import Observation
 import SwiftData
 
+@MainActor
 @Observable
 class HomeViewModel {
     var movies: [MovieSearchItem] = []
@@ -18,8 +19,11 @@ class HomeViewModel {
     var errorMessage: String = ""
     var selectedGenre: String = "All"
     
+    var recommendationImages: [Int: Data] = [:]
+    
     private var searchTask: Task<Void, Never>?
     private var watchlistMovies: [WatchlistMovie] = []
+    
     
     let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime",
                   "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
@@ -107,7 +111,6 @@ class HomeViewModel {
     
     @MainActor
     func fetchRecommendations(context: ModelContext) async {
-        
         let descriptor = FetchDescriptor<WatchlistMovie>()
         do {
             watchlistMovies = try context.fetch(descriptor)
@@ -117,31 +120,55 @@ class HomeViewModel {
         }
         
         guard !watchlistMovies.isEmpty else {
-            await MainActor.run { recommendations = [] }
+            recommendations = []
             return
         }
         
         var allSimilar: [MovieSearchItem] = []
-        
-        for movie in watchlistMovies {
-            do {
-                let similar = try await APIService.shared.fetchSimilarMovies(movieID: movie.id)
-                allSimilar.append(contentsOf: similar)
-            } catch {
-                print("Failed to fetch similar for \(movie.id): \(error)")
+        await withTaskGroup(of: [MovieSearchItem].self) { group in
+            for movie in watchlistMovies {
+                group.addTask {
+                    do {
+                        return try await APIService.shared.fetchSimilarMovies(movieID: movie.id)
+                    } catch {
+                        print("Failed to fetch similar for \(movie.id): \(error)")
+                        return []
+                    }
+                }
+            }
+            for await similarMovies in group {
+                allSimilar.append(contentsOf: similarMovies)
             }
         }
         
         // Check for duplicates and excldue movies that are already in Bookmark
         let watchlistIDs = Set(watchlistMovies.map { $0.id })
         var seenIDs = Set<Int>()
-        
         let uniqueRecommendations = allSimilar
             .filter { !watchlistIDs.contains($0.id) }
             .filter { seenIDs.insert($0.id).inserted }
         
-        await MainActor.run {
-            recommendations = Array(uniqueRecommendations.prefix(20))
+        recommendations = Array(uniqueRecommendations.prefix(20))
+        
+        await withTaskGroup(of: (Int, Data?).self) { group in
+            for movie in recommendations {
+                if let url = APIService.shared.fullPosterURL(for: movie.posterPath) {
+                    group.addTask {
+                        do {
+                            let data = try await APIService.shared.fetchImageData(from: url)
+                            return (movie.id, data)
+                        } catch {
+                            print("Error fetching image for movie id \(movie.id): \(error)")
+                            return (movie.id, nil)
+                        }
+                    }
+                }
+            }
+            for await (movieId, data) in group {
+                if let data = data {
+                    recommendationImages[movieId] = data
+                }
+            }
         }
     }
 }

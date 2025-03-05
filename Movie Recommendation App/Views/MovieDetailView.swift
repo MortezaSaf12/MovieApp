@@ -12,11 +12,11 @@ struct MovieDetailView: View {
     
     let movieID: Int
     @Environment(\.modelContext) private var modelContext
-    private var viewModel: MovieDetailViewModel
+    @State private var viewModel: MovieDetailViewModel
     
     init(movieID: Int, isBookmarked: Bool = false) {
-        self.movieID = movieID
-        self.viewModel = MovieDetailViewModel(isBookmarked: isBookmarked)
+            self.movieID = movieID
+            _viewModel = State(initialValue: MovieDetailViewModel(isBookmarked: isBookmarked))
     }
     
     var body: some View {

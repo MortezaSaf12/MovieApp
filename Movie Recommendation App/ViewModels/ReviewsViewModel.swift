@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 
+@MainActor
 @Observable
 class ReviewsViewModel {
     var reviews: [MovieReview] = []
