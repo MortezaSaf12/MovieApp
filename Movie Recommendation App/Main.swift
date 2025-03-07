@@ -14,7 +14,7 @@ struct Main: App {
         WindowGroup {
             HomeView()
         }
-        .modelContainer(for: WatchlistMovie.self)
+        .modelContainer(for: [WatchlistMovie.self, UserPreferences.self])
     }
 }
 

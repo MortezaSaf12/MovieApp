@@ -26,6 +26,12 @@ struct HomeView: View {
                     }
                     .padding(.vertical)
                 }
+                .refreshable {
+                    Task {
+                        viewModel.fetchInitialMovies()
+                        await viewModel.fetchRecommendations(context: context)
+                    }
+                }
                 .navigationTitle("WatchList")
                 .searchable(text: $searchText)
                 .onChange(of: searchText) {
@@ -51,6 +57,13 @@ struct HomeView: View {
             WatchlistView()
                 .tabItem {
                     Label("Bookmarks", systemImage: "list.and.film")
+                }
+            
+            NavigationStack {
+                    SettingsView()
+                }
+                .tabItem {
+                    Label("Preferences", systemImage: "slider.horizontal.3")
                 }
         }
         .task {
@@ -136,7 +149,6 @@ struct MovieGridItemView: View {
         }
     }
 }
-
 
 #Preview {
     HomeView()
