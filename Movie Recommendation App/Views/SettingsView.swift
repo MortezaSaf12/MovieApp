@@ -50,6 +50,7 @@ struct SettingsView: View {
                 Text("Minimum Rating: \(minRating, specifier: "%.1f")")
             }
         }
+        
         .navigationTitle("Preferences")
         .onAppear {
             if let prefs = userPreferences.first {

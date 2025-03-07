@@ -36,7 +36,9 @@ class HomeViewModel {
             do {
                 let page1 = try await APIService.shared.fetchPopularMovies(page: 1)
                 let page2 = try await APIService.shared.fetchPopularMovies(page: 2)
-                let combinedResults = page1 + page2
+                let page3 = try await APIService.shared.fetchPopularMovies(page: 3)
+
+                let combinedResults = page1 + page2 + page3
                 
                 await MainActor.run {
                     movies = combinedResults
@@ -156,7 +158,7 @@ class HomeViewModel {
             await withTaskGroup(of: MovieSearchItem?.self) { group in
                 for movie in uniqueRecommendations {
                     group.addTask { [weak self] in
-                        guard let self = self else { return nil }
+                        guard self != nil else { return nil }
                         do {
                             let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
                             let meetsRating = detail.voteAverage >= userPrefs.minRating
