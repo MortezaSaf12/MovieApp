@@ -20,6 +20,7 @@ struct HomeView: View {
                         List(viewModel.searchResults) { movie in
                             NavigationLink(destination: MovieDetailView(movieID: movie.id)) {
                                 MovieRowView(movie: movie)
+                                    .foregroundColor(ThemeConstants.Colors.text)
                             }
                         }
                         .listStyle(.plain)
@@ -27,7 +28,7 @@ struct HomeView: View {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 24) {
                                 GenreSelectorView(selectedGenre: $viewModel.selectedGenre, genres: viewModel.genres)
-                                            .padding(.top, 8)
+                                    .padding(.top, 8)
                                 
                                 MovieSectionView(
                                     title: "Popular Movies",
@@ -56,6 +57,7 @@ struct HomeView: View {
                                 }
                             }
                             .padding(.vertical)
+                            .foregroundColor(ThemeConstants.Colors.text)
                         }
                     }
                 }
@@ -65,6 +67,9 @@ struct HomeView: View {
                     }
                 }
                 .navigationTitle("WatchList")
+                .foregroundColor(ThemeConstants.Colors.text)
+                .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
+                .toolbarColorScheme(.dark)
                 .searchable(text: $searchText)
                 .onChange(of: searchText, initial: true) { oldValue, newValue in
                     if newValue.isEmpty {
@@ -90,14 +95,18 @@ struct HomeView: View {
                         await viewModel.fetchAllData(context: context)
                     }
                 }
+                .background(ThemeConstants.Colors.background)
+                .foregroundColor(ThemeConstants.Colors.text)
             }
             .tabItem {
                 Label("Home", systemImage: "house")
+                    .foregroundColor(ThemeConstants.Colors.text)
             }
             
             WatchlistView()
                 .tabItem {
                     Label("Bookmarks", systemImage: "list.and.film")
+                        .foregroundColor(ThemeConstants.Colors.text)
                 }
             
             NavigationStack {
@@ -105,12 +114,12 @@ struct HomeView: View {
             }
             .tabItem {
                 Label("Preferences", systemImage: "slider.horizontal.3")
+                    .foregroundColor(ThemeConstants.Colors.text)
             }
         }
+        .accentColor(ThemeConstants.Colors.accent)
     }
 }
-
-
 
 #Preview {
     HomeView()

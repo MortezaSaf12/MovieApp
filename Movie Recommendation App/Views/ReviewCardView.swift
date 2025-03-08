@@ -14,6 +14,7 @@ struct ReviewCardView: View {
             HStack(alignment: .top) {
                 Text(review.author)
                     .font(.headline)
+                    .foregroundColor(ThemeConstants.Colors.text)
                 Spacer()
                 if let rating = review.authorDetails?.rating {
                     HStack(spacing: 2) {
@@ -27,20 +28,20 @@ struct ReviewCardView: View {
             
             Text(review.content)
                 .font(.body)
+                .foregroundColor(ThemeConstants.Colors.text)
                 .lineLimit(4)
             
-            HStack {
-                Spacer()
-                Text(formatDate(review.createdAt))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(formatDate(review.createdAt))
+                .font(.caption)
+                .foregroundColor(ThemeConstants.Colors.secondaryText)
             
             Rectangle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(ThemeConstants.Colors.cardBackground)
                 .frame(height: 1)
         }
-        .padding(.vertical, 8)
+        .padding()
+        .background(ThemeConstants.Colors.cardBackground)
+        .cornerRadius(ThemeConstants.Dimensions.smallCornerRadius)
     }
     
     private func formatDate(_ dateString: String) -> String {

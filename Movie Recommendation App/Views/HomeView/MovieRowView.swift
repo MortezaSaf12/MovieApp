@@ -20,10 +20,14 @@ struct MovieRowView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(movie.title)
                     .font(.headline)
+                    .foregroundColor(ThemeConstants.Colors.text)
                 Text("(\(String(movie.releaseDate.prefix(4))))")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ThemeConstants.Colors.secondaryText)
             }
         }
+        .padding()
+        .background(ThemeConstants.Colors.cardBackground)
+        .cornerRadius(ThemeConstants.Dimensions.smallCornerRadius)
     }
 }

@@ -10,14 +10,24 @@ import SwiftData
 
 @Model
 class UserPreferences {
-    var favoriteGenres: [String]
+    private var _favoriteGenresData: Data?
     var minRating: Double
     
-    // The users relationship to Watchlist, 1 user <-> Many movies
     @Relationship(deleteRule: .nullify) var watchlist: [WatchlistMovie]?
     
+    //
+    var favoriteGenres: [String] {
+        get {
+            guard let data = _favoriteGenresData else { return [] }
+            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        }
+        set {
+            _favoriteGenresData = try? JSONEncoder().encode(newValue)
+        }
+    }
+    
     init(favoriteGenres: [String] = [], minRating: Double = 5.0) {
-        self.favoriteGenres = favoriteGenres
+        self._favoriteGenresData = try? JSONEncoder().encode(favoriteGenres)
         self.minRating = minRating
     }
 }

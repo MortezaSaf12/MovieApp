@@ -21,6 +21,7 @@ struct WatchlistView: View {
                         "No Bookmarks",
                         systemImage: "bookmark.slash",
                         description: Text("Save movies to see them here")
+                            .foregroundColor(ThemeConstants.Colors.secondaryText)
                     )
                 } else {
                     ScrollView {
@@ -41,16 +42,22 @@ struct WatchlistView: View {
                                         }
                                         Text(movie.title)
                                             .lineLimit(1)
+                                            .foregroundColor(ThemeConstants.Colors.text)
                                     }
                                 }
                             }
                         }
                         .padding()
                     }
+                    .background(ThemeConstants.Colors.background)
                 }
             }
             .navigationTitle("Bookmarks")
+            .toolbarColorScheme(.dark)
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
+            .background(ThemeConstants.Colors.background)
+            .foregroundColor(ThemeConstants.Colors.text)
             .task {
                 viewModel.modelContext = modelContext
                 viewModel.fetchMovies()
@@ -68,6 +75,7 @@ struct WatchlistView: View {
                 }
             }
         }
+        .tint(ThemeConstants.Colors.accent)
         .onAppear {
             viewModel.fetchMovies()
         }

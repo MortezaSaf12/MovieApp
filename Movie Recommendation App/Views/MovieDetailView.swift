@@ -15,8 +15,8 @@ struct MovieDetailView: View {
     @State private var viewModel: MovieDetailViewModel
     
     init(movieID: Int, isBookmarked: Bool = false) {
-            self.movieID = movieID
-            _viewModel = State(initialValue: MovieDetailViewModel(isBookmarked: isBookmarked))
+        self.movieID = movieID
+        _viewModel = State(initialValue: MovieDetailViewModel(isBookmarked: isBookmarked))
     }
     
     var body: some View {
@@ -24,48 +24,54 @@ struct MovieDetailView: View {
             Group {
                 if viewModel.isLoading {
                     ProgressView("Loading :)...")
+                        .foregroundColor(ThemeConstants.Colors.text)
+                        .tint(ThemeConstants.Colors.accent)
                 } else if let movie = viewModel.movieDetail {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             
                             ImageLoadingView(url: APIService.shared.fullPosterURL(for: movie.posterPath))
                             
-                            .cornerRadius(8)
+                                .cornerRadius(ThemeConstants.Dimensions.cornerRadius)
                             
                             Text(movie.title)
                                 .font(.title)
                                 .bold()
+                                .foregroundColor(ThemeConstants.Colors.text)
                             
                             HStack {
                                 Text("\(movie.runtime) min")
                                     .font(.subheadline)
+                                    .foregroundColor(ThemeConstants.Colors.secondaryText)
                                 Spacer()
                                 Text("\(String(format: "%.1f", movie.voteAverage)) ★")
                                     .font(.subheadline)
+                                    .foregroundColor(ThemeConstants.Colors.secondaryAccent)
                             }
                             .foregroundColor(.secondary)
+                            .foregroundColor(ThemeConstants.Colors.text)
                             
                             Text("About Movie")
                                 .font(.headline)
+                                .foregroundColor(ThemeConstants.Colors.text)
                             
                             Text(movie.overview)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundColor(ThemeConstants.Colors.text)
                             
                             NavigationLink(destination: ReviewsView(movieID: movie.id)) {
                                 Text("See reviews")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()
-                                    .background(Color.gray.opacity(0.2))
+                                    .background(ThemeConstants.Colors.cardBackground)
                                     .foregroundColor(.blue)
-                                    .cornerRadius(8)
+                                    .cornerRadius(ThemeConstants.Dimensions.cornerRadius)
                             }
-                            
-                            Spacer()
                         }
                         .padding()
                     }
+                    .background(ThemeConstants.Colors.background)
                 } else if !viewModel.errorMessage.isEmpty {
                     Text("Error: \(viewModel.errorMessage)")
                         .foregroundColor(.red)
@@ -73,8 +79,11 @@ struct MovieDetailView: View {
                     Text("No movie details available.")
                 }
             }
+            .background(ThemeConstants.Colors.background)
             .navigationTitle("Detail")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
+            .toolbarColorScheme(.dark)
             .task {
                 viewModel.modelContext = modelContext
                 await viewModel.fetchMovieDetails(movieID: movieID)
@@ -107,7 +116,7 @@ struct MovieDetailView: View {
                 } label: {
                     Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
                         .font(.title)
-                        .foregroundColor(.black)
+                        .foregroundColor(ThemeConstants.Colors.accent)
                         .scaleEffect(x: 1.0, y: 0.8)
                 }
             }

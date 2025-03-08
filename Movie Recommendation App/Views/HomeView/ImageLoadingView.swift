@@ -17,6 +17,7 @@ struct ImageLoadingView: View {
             switch phase {
             case .empty:
                 ProgressView()
+                    .tint(ThemeConstants.Colors.accent)
             case .success(let image):
                 image
                     .resizable()
@@ -27,13 +28,13 @@ struct ImageLoadingView: View {
                 Image(systemName: "photo")
                     .resizable()
                     .scaledToFit()
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeConstants.Colors.secondaryText)
                     .frame(maxWidth: maxWidth, maxHeight: height)
             @unknown default:
                 EmptyView()
             }
         }
-        .cornerRadius(8)
+        .cornerRadius(ThemeConstants.Dimensions.smallCornerRadius)
     }
 }
 

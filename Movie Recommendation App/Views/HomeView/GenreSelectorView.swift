@@ -8,6 +8,9 @@
 import Foundation
 import SwiftUI
 
+import Foundation
+import SwiftUI
+
 struct GenreSelectorView: View {
     @Binding var selectedGenre: String
     let genres: [String]
@@ -17,24 +20,30 @@ struct GenreSelectorView: View {
             HStack(spacing: 12) {
                 ForEach(genres, id: \.self) { genre in
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(ThemeConstants.Animations.standardSpring) {
                             selectedGenre = genre
                         }
                     } label: {
                         Text(genre)
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundStyle(selectedGenre == genre ? .white : .primary)
+                            .foregroundColor(selectedGenre == genre ? ThemeConstants.Colors.text : ThemeConstants.Colors.secondaryText)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background {
                                 if selectedGenre == genre {
                                     Capsule()
-                                        .fill(Color.blue.gradient)
-                                        .shadow(color: .blue.opacity(0.25), radius: 6, x: 0, y: 3)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [ThemeConstants.Colors.accent, ThemeConstants.Colors.secondaryAccent],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: ThemeConstants.Colors.accent.opacity(0.4), radius: 6, x: 0, y: 3)
                                 } else {
                                     Capsule()
-                                        .fill(Color.gray.opacity(0.15))
+                                        .fill(ThemeConstants.Colors.cardBackground)
                                 }
                             }
                     }
@@ -46,7 +55,7 @@ struct GenreSelectorView: View {
         .padding(.vertical, 8)
         .background {
             Rectangle()
-                .fill(.ultraThinMaterial)
+                .fill(ThemeConstants.Colors.background.opacity(0.95))
                 .edgesIgnoringSafeArea(.horizontal)
         }
     }
