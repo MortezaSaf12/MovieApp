@@ -16,9 +16,7 @@ struct SettingsView: View {
     
     // genres from HomeViewModel
     private let genres = ["Action", "Adventure", "Animation", "Comedy", "Crime",
-                         "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
-                         "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller",
-                         "War", "Western"]
+                         "Documentary", "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller","War", "Western"]
     
     var body: some View {
         Form {
@@ -61,11 +59,14 @@ struct SettingsView: View {
     }
     
     private func updatePreferences() {
-        if let prefs = userPreferences.first {
-            prefs.favoriteGenres = Array(selectedGenres)
-            prefs.minRating = minRating
-            try? context.save()
+        if userPreferences.isEmpty {
+            let newPrefs = UserPreferences(favoriteGenres: Array(selectedGenres), minRating: minRating)
+            context.insert(newPrefs)
+        } else {
+            userPreferences[0].favoriteGenres = Array(selectedGenres)
+            userPreferences[0].minRating = minRating
         }
+        try? context.save()
     }
 }
 

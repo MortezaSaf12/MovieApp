@@ -6,53 +6,96 @@
 //
 
 import Foundation
-import SwiftUI
 import Observation
 import SwiftData
 
 @MainActor
 @Observable
 class HomeViewModel {
-    var movies: [MovieSearchItem] = []
-    var recommendations: [MovieSearchItem] = []
+    var popularMovies: [MovieSearchItem] = []
+    var topRated: [MovieSearchItem] = []
+    var upcomingMovies: [MovieSearchItem] = []
+    var recommendedMovies: [MovieSearchItem] = []
+    var watchlistMovies: [WatchlistMovie] = []
+    var searchResults: [MovieSearchItem] = []
+    var recommendationImages: [Int: Data] = [:]
+    
     var isLoading = false
     var errorMessage: String = ""
     var selectedGenre: String = "All"
     
-    var recommendationImages: [Int: Data] = [:]
-    
     private var searchTask: Task<Void, Never>?
-    private var watchlistMovies: [WatchlistMovie] = []
     private var userPrefs: UserPreferences?
-
+    
     
     let genres = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime",
                   "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
                   "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller",
                   "War", "Western"]
     
-    func fetchInitialMovies() {
+    func fetchAllData(context: ModelContext) async {
+        fetchInitialMovies()
+        fetchTopRatedMovies()
+        fetchUpcomingMovies()
+        await fetchRecommendations(context: context)
+    }
+    
+    private func fetchPaginatedData(
+        endpoint: @escaping (Int) async throws -> [MovieSearchItem],
+        assignTo: @escaping ([MovieSearchItem]) -> Void
+    ) {
         Task {
             do {
-                let page1 = try await APIService.shared.fetchPopularMovies(page: 1)
-                let page2 = try await APIService.shared.fetchPopularMovies(page: 2)
-                let page3 = try await APIService.shared.fetchPopularMovies(page: 3)
-
-                let combinedResults = page1 + page2 + page3
+                let page1 = try await endpoint(1)
+                let page2 = try await endpoint(2)
+                let page3 = try await endpoint(3)
+                
+                // Realized that TMDb API sometimes returns same movies in multiple pages, therefore must check results for duplicates
+                var seenIDs = Set<Int>()
+                let combined = (page1 + page2 + page3)
+                    .filter { seenIDs.insert($0.id).inserted }
                 
                 await MainActor.run {
-                    movies = combinedResults
+                    assignTo(combined)
                     isLoading = false
                     errorMessage = ""
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                    movies = []
-                }
+                await handleError(error, for: assignTo)
             }
         }
+    }
+    
+    private func handleError(_ error: Error, for handler: @escaping ([MovieSearchItem]) -> Void) async {
+        let message = "Failed to fetch data: \(error.localizedDescription)"
+        
+        await MainActor.run {
+            handler([])
+            errorMessage = message
+            isLoading = false
+        }
+        print(message)
+    }
+    
+    func fetchInitialMovies() {
+        fetchPaginatedData(
+            endpoint: APIService.shared.fetchPopularMovies(page:),
+            assignTo: { self.popularMovies = $0 }
+        )
+    }
+    
+    func fetchTopRatedMovies() {
+        fetchPaginatedData(
+            endpoint: APIService.shared.fetchTopRatedMovies(page:),
+            assignTo: { self.topRated = $0 }
+        )
+    }
+    
+    func fetchUpcomingMovies() {
+        fetchPaginatedData(
+            endpoint: APIService.shared.fetchUpcomingMovies(page:),
+            assignTo: { self.upcomingMovies = $0 }
+        )
     }
     
     func handleSearch(text: String) {
@@ -62,9 +105,15 @@ class HomeViewModel {
         }
         
         searchTask?.cancel()
-        searchTask = Task {
-            guard !Task.isCancelled else { return }
-            await fetchMovies(searchTerm: text)
+        searchTask = Task { @MainActor in
+            do {
+                // Added 300ms delay to prevent exessive API calls
+                try await Task.sleep(nanoseconds: 300_000_000)
+                if Task.isCancelled { return }
+                await fetchMovies(searchTerm: text)
+            } catch {
+                print("Search was cancelled or failed: \(error)")
+            }
         }
     }
     
@@ -76,7 +125,7 @@ class HomeViewModel {
             
             if selectedGenre == "All" {
                 await MainActor.run {
-                    movies = results
+                    searchResults = results
                     isLoading = false
                     errorMessage = ""
                 }
@@ -85,7 +134,7 @@ class HomeViewModel {
                 let filteredMovies = await filterMoviesByGenre(movies: results, genre: selectedGenre)
                 
                 await MainActor.run {
-                    movies = filteredMovies
+                    searchResults = filteredMovies
                     isLoading = false
                     errorMessage = filteredMovies.isEmpty ? "No movies found for selected genre" : ""
                 }
@@ -94,7 +143,7 @@ class HomeViewModel {
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 isLoading = false
-                movies = []
+                searchResults = []
             }
         }
     }
@@ -125,7 +174,7 @@ class HomeViewModel {
         }
         
         guard !watchlistMovies.isEmpty else {
-            recommendations = []
+            recommendedMovies = []
             return
         }
         
@@ -155,32 +204,32 @@ class HomeViewModel {
         
         // User preference recommendation
         var filteredMovies: [MovieSearchItem] = []
-            await withTaskGroup(of: MovieSearchItem?.self) { group in
-                for movie in uniqueRecommendations {
-                    group.addTask { [weak self] in
-                        guard self != nil else { return nil }
-                        do {
-                            let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
-                            let meetsRating = detail.voteAverage >= userPrefs.minRating
-                            let hasFavoriteGenre = userPrefs.favoriteGenres.isEmpty ||
-                                detail.genres.contains { userPrefs.favoriteGenres.contains($0.name) }
-                            return (meetsRating && hasFavoriteGenre) ? movie : nil
-                        } catch {
-                            return nil
-                        }
-                    }
-                }
-                for await result in group {
-                    if let validMovie = result {
-                        filteredMovies.append(validMovie)
+        await withTaskGroup(of: MovieSearchItem?.self) { group in
+            for movie in uniqueRecommendations {
+                group.addTask { [weak self] in
+                    guard self != nil else { return nil }
+                    do {
+                        let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
+                        let meetsRating = detail.voteAverage >= userPrefs.minRating
+                        let hasFavoriteGenre = userPrefs.favoriteGenres.isEmpty ||
+                        detail.genres.contains { userPrefs.favoriteGenres.contains($0.name) }
+                        return (meetsRating && hasFavoriteGenre) ? movie : nil
+                    } catch {
+                        return nil
                     }
                 }
             }
+            for await result in group {
+                if let validMovie = result {
+                    filteredMovies.append(validMovie)
+                }
+            }
+        }
         
-        recommendations = Array(uniqueRecommendations.prefix(20))
+        recommendedMovies = Array(uniqueRecommendations.prefix(20))
         
         await withTaskGroup(of: (Int, Data?).self) { group in
-            for movie in recommendations {
+            for movie in recommendedMovies {
                 if let url = APIService.shared.fullPosterURL(for: movie.posterPath) {
                     group.addTask {
                         do {

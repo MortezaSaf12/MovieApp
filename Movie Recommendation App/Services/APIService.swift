@@ -35,6 +35,24 @@ class APIService {
         return response.results ?? []
     }
     
+    func fetchTopRatedMovies(page: Int = 1) async throws -> [MovieSearchItem] {
+        guard let url = URL(string: "\(baseURL)/movie/top_rated?api_key=\(apiKey)&page=\(page)") else {
+            throw URLError(.badURL)
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
+        return response.results ?? []
+    }
+    
+    func fetchUpcomingMovies(page: Int = 1) async throws -> [MovieSearchItem] {
+        guard let url = URL(string: "\(baseURL)/movie/upcoming?api_key=\(apiKey)&page=\(page)") else {
+            throw URLError(.badURL)
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
+        return response.results ?? []
+    }
+    
     func fetchMovieDetails(movieID: Int) async throws -> MovieDetail {
         guard let url = URL(string: "\(baseURL)/movie/\(movieID)?api_key=\(apiKey)") else {
             throw URLError(.badURL)
@@ -60,7 +78,6 @@ class APIService {
         return URL(string: "\(imageBaseURL)\(posterPath)")
     }
     
-    // Fetch similar movies from the TMDb API
     func fetchSimilarMovies(movieID: Int) async throws -> [MovieSearchItem] {
         guard let url = URL(string: "\(baseURL)/movie/\(movieID)/similar?api_key=\(apiKey)") else {
             throw URLError(.badURL)
