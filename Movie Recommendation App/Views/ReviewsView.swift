@@ -18,28 +18,34 @@ struct ReviewsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if viewModel.isLoading {
                     ProgressView("Loading reviews...")
-                        .frame(maxWidth: .infinity, alignment: .center)
+                        .foregroundColor(ThemeConstants.Colors.text)
+                        .tint(ThemeConstants.Colors.accent)
                         .padding()
                 } else if !viewModel.errorMessage.isEmpty {
                     Text(viewModel.errorMessage)
-                        .foregroundColor(.red)
+                        .foregroundColor(ThemeConstants.Colors.accent)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else if viewModel.reviews.isEmpty {
                     Text("No reviews available for this movie.")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(ThemeConstants.Colors.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else {
                     ForEach(viewModel.reviews) { review in
                         ReviewCardView(review: review)
+                            .background(ThemeConstants.Colors.cardBackground)
+                            .cornerRadius(ThemeConstants.Dimensions.cornerRadius)
+                            .padding(.horizontal)
                     }
                 }
             }
             .padding()
         }
+        .background(ThemeConstants.Colors.background)
         .navigationTitle("Reviews")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
         .task {
             await viewModel.fetchReviews(for: movieID)
         }

@@ -11,7 +11,7 @@ import SwiftUI
 struct MovieSectionView: View {
     let title: String
     let movies: [MovieSearchItem]
-    let recommendationImages: [Int: Data] // Mapping of movie ID to image data
+    let recommendationImages: [Int: Data]
 
     var body: some View {
         VStack(alignment: .leading) {

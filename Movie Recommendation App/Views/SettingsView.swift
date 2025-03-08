@@ -16,11 +16,13 @@ struct SettingsView: View {
     
     // genres from HomeViewModel
     private let genres = ["Action", "Adventure", "Animation", "Comedy", "Crime",
-                         "Documentary", "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller","War", "Western"]
+                          "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
+                          "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller",
+                          "War", "Western"]
     
     var body: some View {
         Form {
-            Section(header: Text("Favorite Genres")) {
+            Section(header: Text("Favorite Genres").foregroundColor(ThemeConstants.Colors.secondaryText)) {
                 ForEach(genres, id: \.self) { genre in
                     Toggle(isOn: Binding(
                         get: { selectedGenres.contains(genre) },
@@ -34,22 +36,34 @@ struct SettingsView: View {
                         }
                     )) {
                         Text(genre)
+                            .foregroundColor(ThemeConstants.Colors.text)
                     }
+                    .tint(ThemeConstants.Colors.accent)
+                    .listRowBackground(ThemeConstants.Colors.cardBackground)
                 }
             }
             
-            Section(header: Text("Minimum Rating")) {
+            Section(header: Text("Minimum Rating").foregroundColor(ThemeConstants.Colors.secondaryText)) {
                 Slider(
                     value: $minRating,
                     in: 0...10,
                     step: 0.5,
                     onEditingChanged: { _ in updatePreferences() }
                 )
+                .tint(ThemeConstants.Colors.accent)
+                .listRowBackground(ThemeConstants.Colors.cardBackground)
+                
                 Text("Minimum Rating: \(minRating, specifier: "%.1f")")
+                    .foregroundColor(ThemeConstants.Colors.text)
+                    .listRowBackground(ThemeConstants.Colors.cardBackground)
             }
         }
-        
+        .scrollContentBackground(.hidden)
+        .background(ThemeConstants.Colors.background)
         .navigationTitle("Preferences")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
+        .toolbarColorScheme(.dark)
         .onAppear {
             if let prefs = userPreferences.first {
                 selectedGenres = Set(prefs.favoriteGenres)
@@ -59,14 +73,11 @@ struct SettingsView: View {
     }
     
     private func updatePreferences() {
-        if userPreferences.isEmpty {
-            let newPrefs = UserPreferences(favoriteGenres: Array(selectedGenres), minRating: minRating)
-            context.insert(newPrefs)
-        } else {
-            userPreferences[0].favoriteGenres = Array(selectedGenres)
-            userPreferences[0].minRating = minRating
+        if let prefs = userPreferences.first {
+            prefs.favoriteGenres = Array(selectedGenres)
+            prefs.minRating = minRating
+            try? context.save()
         }
-        try? context.save()
     }
 }
 

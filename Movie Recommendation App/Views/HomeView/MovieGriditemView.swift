@@ -27,13 +27,18 @@ struct MovieGridItemView: View {
             
             Text(movie.title)
                 .font(.caption)
+                .foregroundColor(ThemeConstants.Colors.text)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .frame(maxWidth: 120)
             
             Text("(\(String(movie.releaseDate.prefix(4))))")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(ThemeConstants.Colors.secondaryText)
         }
+        .padding()
+        .background(ThemeConstants.Colors.background)
+        .cornerRadius(ThemeConstants.Dimensions.cornerRadius)
+        
     }
 }
