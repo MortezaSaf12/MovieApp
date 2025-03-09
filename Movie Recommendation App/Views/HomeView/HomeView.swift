@@ -66,8 +66,13 @@ struct HomeView: View {
                         await viewModel.fetchAllData(context: context)
                     }
                 }
-                .navigationTitle("WatchList")
-                .foregroundColor(ThemeConstants.Colors.text)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("WatchList")
+                            .font(.headline)
+                            .foregroundColor(ThemeConstants.Colors.text)
+                    }
+                }
                 .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
                 .toolbarColorScheme(.dark)
                 .searchable(text: $searchText)

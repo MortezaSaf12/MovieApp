@@ -43,8 +43,13 @@ struct ReviewsView: View {
             .padding()
         }
         .background(ThemeConstants.Colors.background)
-        .navigationTitle("Reviews")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Reviews")
+                    .font(.headline)
+                    .foregroundColor(ThemeConstants.Colors.text)
+            }
+        }
         .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
         .task {
             await viewModel.fetchReviews(for: movieID)

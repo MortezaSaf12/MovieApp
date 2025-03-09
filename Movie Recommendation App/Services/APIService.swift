@@ -88,7 +88,16 @@ class APIService {
         return response.results ?? []
     }
     
-
+    //business logic
+    func fetchMoviesByGenres(genreIDs: [Int], minRating: Double) async throws -> [MovieSearchItem] {
+            let genreIDString = genreIDs.map(String.init).joined(separator: ",")
+            guard let url = URL(string: "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreIDString)&vote_average.gte=\(minRating)&sort_by=popularity.desc") else {
+                throw URLError(.badURL)
+            }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(MovieSearchResponse.self, from: data)
+            return response.results ?? []
+        }
 
     func fetchImageData(from url: URL) async throws -> Data {
         let (data, _) = try await URLSession.shared.data(from: url)

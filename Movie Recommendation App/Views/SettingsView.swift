@@ -60,8 +60,13 @@ struct SettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(ThemeConstants.Colors.background)
-        .navigationTitle("Preferences")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Preferences")
+                    .font(.headline)
+                    .foregroundColor(ThemeConstants.Colors.text)
+            }
+        }
         .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
         .toolbarColorScheme(.dark)
         .onAppear {

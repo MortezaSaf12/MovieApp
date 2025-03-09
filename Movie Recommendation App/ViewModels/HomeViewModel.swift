@@ -33,6 +33,29 @@ class HomeViewModel {
                   "Music", "Mystery", "Romance", "Sci-Fi", "TV Movie", "Thriller",
                   "War", "Western"]
     
+    // Mapping from genre names to TMDb genre IDs
+    let genreMapping: [String: Int] = [
+        "Action": 28,
+        "Adventure": 12,
+        "Animation": 16,
+        "Comedy": 35,
+        "Crime": 80,
+        "Documentary": 99,
+        "Drama": 18,
+        "Family": 10751,
+        "Fantasy": 14,
+        "History": 36,
+        "Horror": 27,
+        "Music": 10402,
+        "Mystery": 9648,
+        "Romance": 10749,
+        "Sci-Fi": 878,
+        "TV Movie": 10770,
+        "Thriller": 53,
+        "War": 10752,
+        "Western": 37
+    ]
+    
     func fetchAllData(context: ModelContext) async {
         fetchInitialMovies()
         fetchTopRatedMovies()
@@ -163,7 +186,9 @@ class HomeViewModel {
     
     @MainActor
     func fetchRecommendations(context: ModelContext) async {
-        let userPrefs = (try? context.fetch(FetchDescriptor<UserPreferences>()).first) ?? UserPreferences()
+        let fetchedUserPrefs = try? context.fetch(FetchDescriptor<UserPreferences>()).first
+        let userPreferences = fetchedUserPrefs ?? UserPreferences()
+        self.userPrefs = userPreferences
         
         let descriptor = FetchDescriptor<WatchlistMovie>()
         do {
@@ -173,60 +198,90 @@ class HomeViewModel {
             return
         }
         
-        guard !watchlistMovies.isEmpty else {
+        var genreFrequency: [Int: Int] = [:]
+        if watchlistMovies.isEmpty {
+            for favorite in userPreferences.favoriteGenres {
+                if let genreId = genreMapping[favorite] {
+                    genreFrequency[genreId, default: 0] += 2
+                }
+            }
+        } else {
+            await withTaskGroup(of: MovieDetail?.self) { group in
+                for movie in watchlistMovies {
+                    group.addTask {
+                        try? await APIService.shared.fetchMovieDetails(movieID: movie.id)
+                    }
+                }
+                for await detail in group {
+                    if let detail = detail {
+                        for genre in detail.genres {
+                            genreFrequency[genre.id, default: 0] += 1
+                        }
+                    }
+                }
+            }
+            for favorite in userPreferences.favoriteGenres {
+                if let genreId = genreMapping[favorite] {
+                    genreFrequency[genreId, default: 0] += 2
+                }
+            }
+        }
+        
+        let topGenres = genreFrequency.sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { $0.key }
+        
+        guard !topGenres.isEmpty else {
             recommendedMovies = []
             return
         }
         
-        var allSimilar: [MovieSearchItem] = []
-        await withTaskGroup(of: [MovieSearchItem].self) { group in
-            for movie in watchlistMovies {
-                group.addTask {
-                    do {
-                        return try await APIService.shared.fetchSimilarMovies(movieID: movie.id)
-                    } catch {
-                        print("Failed to fetch similar for \(movie.id): \(error)")
-                        return []
-                    }
-                }
-            }
-            for await similarMovies in group {
-                allSimilar.append(contentsOf: similarMovies)
-            }
+        var discoveredMovies: [MovieSearchItem] = []
+        do {
+            discoveredMovies = try await APIService.shared.fetchMoviesByGenres(
+                genreIDs: topGenres,
+                minRating: userPreferences.minRating
+            )
+        } catch {
+            print("Error fetching discovered movies: \(error)")
         }
         
-        // Deduplicate
-        let watchlistIDs = Set(watchlistMovies.map { $0.id })
-        var seenIDs = Set<Int>()
-        let uniqueRecommendations = allSimilar
-            .filter { !watchlistIDs.contains($0.id) }
-            .filter { seenIDs.insert($0.id).inserted }
+        let bookmarkedIDs = Set(watchlistMovies.map { $0.id })
+        discoveredMovies = discoveredMovies.filter { !bookmarkedIDs.contains($0.id) }
         
-        // User preference recommendation
-        var filteredMovies: [MovieSearchItem] = []
-        await withTaskGroup(of: MovieSearchItem?.self) { group in
-            for movie in uniqueRecommendations {
+        /* Filter movies based on user preferences and calculate bonus score.
+         Added complexity to the business logic: If a user has a movie in bookmarks that matches on of their preferred genre(s), give an extra bonus for that. */
+        var scoredMovies: [(movie: MovieSearchItem, score: Int)] = []
+        await withTaskGroup(of: (MovieSearchItem, Int)?.self) { group in
+            for movie in discoveredMovies {
                 group.addTask { [weak self] in
                     guard self != nil else { return nil }
                     do {
                         let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
-                        let meetsRating = detail.voteAverage >= userPrefs.minRating
-                        let hasFavoriteGenre = userPrefs.favoriteGenres.isEmpty ||
-                        detail.genres.contains { userPrefs.favoriteGenres.contains($0.name) }
-                        return (meetsRating && hasFavoriteGenre) ? movie : nil
+                        let meetsRating = detail.voteAverage >= userPreferences.minRating
+                        let matchingFavoriteGenres = detail.genres.filter { userPreferences.favoriteGenres.contains($0.name) }
+                        let hasFavoriteGenre = !matchingFavoriteGenres.isEmpty
+                        let bonusScore = matchingFavoriteGenres.count > 1 ? matchingFavoriteGenres.count - 1 : 0
+                        if meetsRating && (hasFavoriteGenre || userPreferences.favoriteGenres.isEmpty) {
+                            return (movie, bonusScore)
+                        } else {
+                            return nil
+                        }
                     } catch {
                         return nil
                     }
                 }
             }
+            
             for await result in group {
-                if let validMovie = result {
-                    filteredMovies.append(validMovie)
+                if let (movie, score) = result {
+                    scoredMovies.append((movie, score))
                 }
             }
         }
         
-        recommendedMovies = Array(uniqueRecommendations.prefix(20))
+        scoredMovies.sort { $0.score > $1.score }
+        recommendedMovies = scoredMovies.prefix(20).map { $0.movie }
         
         await withTaskGroup(of: (Int, Data?).self) { group in
             for movie in recommendedMovies {
@@ -249,4 +304,5 @@ class HomeViewModel {
             }
         }
     }
+    
 }

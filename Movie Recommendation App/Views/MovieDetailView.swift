@@ -80,8 +80,13 @@ struct MovieDetailView: View {
                 }
             }
             .background(ThemeConstants.Colors.background)
-            .navigationTitle("Detail")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Details")
+                        .font(.headline)
+                        .foregroundColor(ThemeConstants.Colors.text)
+                }
+            }
             .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
             .toolbarColorScheme(.dark)
             .task {

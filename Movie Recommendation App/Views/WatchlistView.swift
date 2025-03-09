@@ -52,9 +52,13 @@ struct WatchlistView: View {
                     .background(ThemeConstants.Colors.background)
                 }
             }
-            .navigationTitle("Bookmarks")
-            .toolbarColorScheme(.dark)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Bookmarks")
+                        .font(.headline)
+                        .foregroundColor(ThemeConstants.Colors.text)
+                }
+            }
             .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
             .background(ThemeConstants.Colors.background)
             .foregroundColor(ThemeConstants.Colors.text)
