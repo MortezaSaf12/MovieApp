@@ -227,6 +227,13 @@ class HomeViewModel {
             }
         }
         
+        // Extra bonus for prioritized genres
+        for prioritized in userPreferences.prioritizedGenres {
+            if let genreId = genreMapping[prioritized] {
+                genreFrequency[genreId, default: 0] += 1
+            }
+        }
+        
         let topGenres = genreFrequency.sorted { $0.value > $1.value }
             .prefix(3)
             .map { $0.key }

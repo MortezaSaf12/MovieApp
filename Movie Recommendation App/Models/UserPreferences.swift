@@ -11,6 +11,7 @@ import SwiftData
 @Model
 class UserPreferences {
     private var _favoriteGenresData: Data?
+    private var _prioritizedGenresData: Data?
     var minRating: Double
     
     @Relationship(deleteRule: .nullify) var watchlist: [WatchlistMovie]?
@@ -23,6 +24,17 @@ class UserPreferences {
         }
         set {
             _favoriteGenresData = try? JSONEncoder().encode(newValue)
+        }
+    }
+    
+    var prioritizedGenres: [String] {
+        get {
+            guard let data = _prioritizedGenresData else { return [] }
+            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        }
+        set {
+            let limited = Array(newValue.prefix(3))
+            _prioritizedGenresData = try? JSONEncoder().encode(limited)
         }
     }
     

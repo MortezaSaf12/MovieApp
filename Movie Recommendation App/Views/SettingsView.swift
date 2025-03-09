@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Query private var userPreferences: [UserPreferences]
     @State private var selectedGenres: Set<String> = []
+    @State private var prioritizedGenres: Set<String> = []
     @State private var minRating: Double = 5.0
     
     // genres from HomeViewModel
@@ -26,11 +27,12 @@ struct SettingsView: View {
                 ForEach(genres, id: \.self) { genre in
                     Toggle(isOn: Binding(
                         get: { selectedGenres.contains(genre) },
-                        set: {
-                            if $0 {
+                        set: { newValue in
+                            if newValue {
                                 selectedGenres.insert(genre)
                             } else {
                                 selectedGenres.remove(genre)
+                                prioritizedGenres.remove(genre)
                             }
                             updatePreferences()
                         }
@@ -42,6 +44,34 @@ struct SettingsView: View {
                     .listRowBackground(ThemeConstants.Colors.cardBackground)
                 }
             }
+            
+            if !selectedGenres.isEmpty {
+                Section(header: Text("Prioritized Genres (max 3)")
+                    .foregroundColor(ThemeConstants.Colors.secondaryText)) {
+                        ForEach(Array(selectedGenres).sorted(), id: \.self) { genre in
+                            HStack {
+                                Text (genre)
+                                    .foregroundColor(ThemeConstants.Colors.text)
+                                Spacer()
+                                Button {
+                                    if prioritizedGenres.contains(genre) {
+                                        prioritizedGenres.remove(genre)
+                                    } else if prioritizedGenres.count < 3 {
+                                        prioritizedGenres.insert(genre)
+                                    }
+                                    updatePreferences()
+                                } label: {
+                                    Image(systemName: prioritizedGenres.contains(genre) ? "star.fill" : "star")
+                                        .foregroundColor(prioritizedGenres.contains(genre) ? ThemeConstants.Colors.accent : ThemeConstants.Colors.secondaryText)
+                                }
+                                .disabled(!prioritizedGenres.contains(genre) && prioritizedGenres.count >= 3)
+
+                            }
+                            .listRowBackground(ThemeConstants.Colors.cardBackground)
+                        }
+                    }
+            }
+
             
             Section(header: Text("Minimum Rating").foregroundColor(ThemeConstants.Colors.secondaryText)) {
                 Slider(
