@@ -38,8 +38,9 @@ class UserPreferences {
         }
     }
     
-    init(favoriteGenres: [String] = [], minRating: Double = 5.0) {
+    init(favoriteGenres: [String] = [], prioritizedGenres: [String] = [], minRating: Double = 5.0) {
         self._favoriteGenresData = try? JSONEncoder().encode(favoriteGenres)
+        self._prioritizedGenresData = try? JSONEncoder().encode(prioritizedGenres)
         self.minRating = minRating
     }
 }

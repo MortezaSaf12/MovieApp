@@ -180,10 +180,9 @@ class HomeViewModel {
                 filteredResults.append(movie)
             }
         }
-        
         return filteredResults
     }
-    
+    /*
     @MainActor
     func fetchRecommendations(context: ModelContext) async {
         let fetchedUserPrefs = try? context.fetch(FetchDescriptor<UserPreferences>()).first
@@ -230,7 +229,7 @@ class HomeViewModel {
         // Extra bonus for prioritized genres
         for prioritized in userPreferences.prioritizedGenres {
             if let genreId = genreMapping[prioritized] {
-                genreFrequency[genreId, default: 0] += 1
+                genreFrequency[genreId, default: 0] += 2
             }
         }
         
@@ -292,7 +291,7 @@ class HomeViewModel {
         
         await fetchRecommendationImages(for: recommendedMovies)
     }
-    
+    */
     // Refactored fetchRecommendationImages responsible for downloading images, fetchrecommendation can now focus solely on reocmmending mvoies
     func fetchRecommendationImages(for movies: [MovieSearchItem]) async {
         await withTaskGroup(of: (Int, Data?).self) { group in
@@ -315,5 +314,179 @@ class HomeViewModel {
                 }
             }
         }
+    }
+}
+
+@MainActor
+extension HomeViewModel {
+    
+    func fetchRecommendations(context: ModelContext) async {
+        // Fetch user preferences
+        let userPreferences = await getUserPreferences(context: context)
+        self.userPrefs = userPreferences
+        
+        // Fetch watchlist movies
+        guard let watchlist = await fetchWatchlistMovies(context: context) else {
+            return
+        }
+        self.watchlistMovies = watchlist
+        
+        // Compute frequency of genres based on watchlist and user preferences
+        let frequency = await computeGenreFrequency(userPrefs: userPreferences, watchlist: watchlist)
+        
+        //Get the top 3 genre IDs based on computed frequency.
+        let topGenresIDs = topGenres(from: frequency)
+        guard !topGenresIDs.isEmpty else {
+            recommendedMovies = [] // Clear recommendations if no top genres found.
+            return
+        }
+        
+        // Fetch movies from API matching top genres meeting min rating.
+        var discoveredMovies: [MovieSearchItem] = []
+        do {
+            discoveredMovies = try await fetchDiscoveredMovies(topGenres: topGenresIDs, minRating: userPreferences.minRating)
+        } catch {
+        }
+        
+        // Remove movies already bookmarked.
+        let filteredMovies = filterBookmarked(discovered: discoveredMovies, watchlist: watchlist)
+        
+        let scoredMovies = await scoreMovies(for: filteredMovies, using: userPreferences)
+        for (movie, score) in scoredMovies {
+        }
+        
+        // Sort scored movies and take the top 20 recommendations.
+        recommendedMovies = scoredMovies.sorted { $0.score > $1.score }
+            .prefix(20)
+            .map { $0.movie }
+        
+        await fetchRecommendationImages(for: recommendedMovies)
+        
+    }
+    
+    
+    /// MARK: - Helper Functions
+    
+    // Retrieves user preferences from the persistent storage.
+    func getUserPreferences(context: ModelContext) async -> UserPreferences {
+        let fetchedPrefs = (try? context.fetch(FetchDescriptor<UserPreferences>()))?.first
+        let prefs = fetchedPrefs ?? UserPreferences()
+        return prefs
+    }
+    
+    // Fetches the list of bookmarked movies from the persistent storage.
+    func fetchWatchlistMovies(context: ModelContext) async -> [WatchlistMovie]? {
+        let descriptor = FetchDescriptor<WatchlistMovie>()
+        do {
+            let movies = try context.fetch(descriptor)
+            return movies
+        } catch {
+            return nil
+        }
+    }
+    
+
+    //Gather genre counts from the watchlist movie details, add bonus counts for favorite genres (and prioritized genres)
+    func computeGenreFrequency(userPrefs: UserPreferences, watchlist: [WatchlistMovie]) async -> [Int: Int] {
+        var frequency: [Int: Int] = [:]
+        
+        if watchlist.isEmpty {
+            for favorite in userPrefs.favoriteGenres {
+                if let genreId = genreMapping[favorite] {
+                    frequency[genreId, default: 0] += 2
+                }
+            }
+        } else {
+            // Concurrently fetch details for each movie in the watchlist
+            await withTaskGroup(of: MovieDetail?.self) { group in
+                for movie in watchlist {
+                    group.addTask {
+                        try? await APIService.shared.fetchMovieDetails(movieID: movie.id)
+                    }
+                }
+                // For each fetched movie detail, count each genre
+                for await detail in group {
+                    if let detail = detail {
+                        for genre in detail.genres {
+                            // Standard increment
+                            frequency[genre.id, default: 0] += 1
+                            // Bonus if genre is among favorite genres
+                            if userPrefs.favoriteGenres.contains(genre.name) {
+                                frequency[genre.id, default: 0] += 1
+                            }
+                        }
+                    }
+                }
+            }
+            // Bonus for each favorite genre
+            for favorite in userPrefs.favoriteGenres {
+                if let genreId = genreMapping[favorite] {
+                    frequency[genreId, default: 0] += 2
+                }
+            }
+        }
+        // Bonus for prioritized genres
+        for prioritized in userPrefs.prioritizedGenres {
+            if let genreId = genreMapping[prioritized] {
+                frequency[genreId, default: 0] += 1
+            }
+        }
+        
+        return frequency
+    }
+
+    
+    // Returns the top 3 genre IDs sorted by frequency.
+    func topGenres(from frequency: [Int: Int]) -> [Int] {
+        let top = frequency.sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { $0.key }
+        return top
+    }
+    
+    // Fetch movies from the API based on top genre IDs and min rating.
+    func fetchDiscoveredMovies(topGenres: [Int], minRating: Double) async throws -> [MovieSearchItem] {
+        let movies = try await APIService.shared.fetchMoviesByGenres(genreIDs: topGenres, minRating: minRating)
+        return movies
+    }
+    
+    // Filter out movies already present in watchlist.
+    func filterBookmarked(discovered: [MovieSearchItem], watchlist: [WatchlistMovie]) -> [MovieSearchItem] {
+        let bookmarkedIDs = Set(watchlist.map { $0.id })
+        let filtered = discovered.filter { !bookmarkedIDs.contains($0.id) }
+        print("filterBookmarked: Filtered out \(discovered.count - filtered.count) movies already bookmarked")
+        return filtered
+    }
+    
+    // Score each movie by fetching details, checking if it meets the minimum rating, then calculates bonus score based on how many favorite genres match.
+    func scoreMovies(for movies: [MovieSearchItem], using userPrefs: UserPreferences) async -> [(movie: MovieSearchItem, score: Int)] {
+        var scored: [(movie: MovieSearchItem, score: Int)] = []
+        await withTaskGroup(of: (MovieSearchItem, Int)?.self) { group in
+            for movie in movies {
+                group.addTask { [weak self] in
+                    guard self != nil else { return nil }
+                    do {
+                        let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
+                        let meetsRating = detail.voteAverage >= userPrefs.minRating
+                        let matchingFavorites = detail.genres.filter { userPrefs.favoriteGenres.contains($0.name) }
+                        let bonusScore = matchingFavorites.count > 1 ? matchingFavorites.count - 1 : 0
+                        if meetsRating && (!matchingFavorites.isEmpty || userPrefs.favoriteGenres.isEmpty) {
+                            return (movie, bonusScore)
+                        } else {
+                            return nil
+                        }
+                    } catch {
+                        return nil
+                    }
+                }
+            }
+            // Collect scores from each task.
+            for await result in group {
+                if let item = result {
+                    scored.append(item)
+                }
+            }
+        }
+        return scored
     }
 }

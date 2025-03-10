@@ -9,6 +9,7 @@ import Testing
 @testable import Movie_Recommendation_App
 
 // Do not check if Init works, only test the Edge-cases. Use Testing and not XCTest
+// CAUTION: When testing, do not store the data in SwiftData, only in memory. (So that the data can be removed once the test is finished)
 
 
 
