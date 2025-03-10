@@ -8,10 +8,7 @@
 import Testing
 @testable import Movie_Recommendation_App
 
-struct Movie_Recommendation_AppTests {
+// Do not check if Init works, only test the Edge-cases. Use Testing and not XCTest
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-    }
 
-}
+

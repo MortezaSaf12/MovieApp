@@ -171,7 +171,7 @@ class HomeViewModel {
         }
     }
     
-    private func filterMoviesByGenre(movies: [MovieSearchItem], genre: String) async -> [MovieSearchItem] {
+    func filterMoviesByGenre(movies: [MovieSearchItem], genre: String) async -> [MovieSearchItem] {
         var filteredResults: [MovieSearchItem] = []
         
         for movie in movies {
@@ -283,8 +283,13 @@ class HomeViewModel {
         scoredMovies.sort { $0.score > $1.score }
         recommendedMovies = scoredMovies.prefix(20).map { $0.movie }
         
+        await fetchRecommendationImages(for: recommendedMovies)
+    }
+    
+    // Refactored fetchRecommendationImages responsible for downloading images, fetchrecommendation can now focus solely on reocmmending mvoies
+    func fetchRecommendationImages(for movies: [MovieSearchItem]) async {
         await withTaskGroup(of: (Int, Data?).self) { group in
-            for movie in recommendedMovies {
+            for movie in movies {
                 if let url = APIService.shared.fullPosterURL(for: movie.posterPath) {
                     group.addTask {
                         do {
@@ -304,5 +309,4 @@ class HomeViewModel {
             }
         }
     }
-    
 }
