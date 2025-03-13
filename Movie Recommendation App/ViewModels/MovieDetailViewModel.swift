@@ -21,7 +21,6 @@ class MovieDetailViewModel {
         self.isBookmarked = isBookmarked
     }
     
-    @MainActor
     func checkBookmarkStatus(movieID: Int) async {
         guard let modelContext else { return }
         
@@ -37,7 +36,6 @@ class MovieDetailViewModel {
         }
     }
     
-    @MainActor
     func addToWatchlist(movie: MovieDetail) async {
         guard let modelContext else { return }
         let targetMovieID = movie.id
@@ -78,7 +76,6 @@ class MovieDetailViewModel {
         }
     }
     
-    @MainActor
     func removeFromWatchlist(movieID: Int) async {
         guard let modelContext else { return }
         
@@ -98,23 +95,16 @@ class MovieDetailViewModel {
         }
     }
     
-    @MainActor
     func fetchMovieDetails(movieID: Int) async {
         isLoading = true
         
-        Task {
-            do {
-                let detail = try await APIService.shared.fetchMovieDetails(movieID: movieID)
-                await MainActor.run {
-                    self.movieDetail = detail
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = error.localizedDescription
-                    self.isLoading = false
-                }
-            }
+        do {
+            let detail = try await APIService.shared.fetchMovieDetails(movieID: movieID)
+            self.movieDetail = detail
+            self.isLoading = false
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
         }
     }
 }

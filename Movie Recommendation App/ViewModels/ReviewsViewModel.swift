@@ -21,16 +21,11 @@ class ReviewsViewModel {
         
         do {
             let fetchedReviews = try await APIService.shared.fetchMovieReviews(movieID: movieID)
-            
-            await MainActor.run {
-                self.reviews = fetchedReviews
-                self.isLoading = false
-            }
+            self.reviews = fetchedReviews
+            self.isLoading = false
         } catch {
-            await MainActor.run {
-                self.errorMessage = "Failed to load reviews: \(error.localizedDescription)"
-                self.isLoading = false
-            }
+            self.errorMessage = "Failed to load reviews: \(error.localizedDescription)"
+            self.isLoading = false
         }
     }
 }

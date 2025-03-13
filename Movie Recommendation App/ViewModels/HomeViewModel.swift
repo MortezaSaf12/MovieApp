@@ -123,14 +123,13 @@ class HomeViewModel {
     
     func handleSearch(text: String) {
         guard !text.isEmpty else {
-            fetchInitialMovies()
+            searchResults = []
             return
         }
         
         searchTask?.cancel()
         searchTask = Task { @MainActor in
             do {
-                // Added 300ms delay to prevent exessive API calls
                 try await Task.sleep(nanoseconds: 300_000_000)
                 if Task.isCancelled { return }
                 await fetchMovies(searchTerm: text)
@@ -182,117 +181,8 @@ class HomeViewModel {
         }
         return filteredResults
     }
-    /*
-    @MainActor
-    func fetchRecommendations(context: ModelContext) async {
-        let fetchedUserPrefs = try? context.fetch(FetchDescriptor<UserPreferences>()).first
-        let userPreferences = fetchedUserPrefs ?? UserPreferences()
-        self.userPrefs = userPreferences
-        
-        let descriptor = FetchDescriptor<WatchlistMovie>()
-        do {
-            watchlistMovies = try context.fetch(descriptor)
-        } catch {
-            print("Failed to fetch watchlist: \(error)")
-            return
-        }
-        
-        var genreFrequency: [Int: Int] = [:]
-        if watchlistMovies.isEmpty {
-            for favorite in userPreferences.favoriteGenres {
-                if let genreId = genreMapping[favorite] {
-                    genreFrequency[genreId, default: 0] += 2
-                }
-            }
-        } else {
-            await withTaskGroup(of: MovieDetail?.self) { group in
-                for movie in watchlistMovies {
-                    group.addTask {
-                        try? await APIService.shared.fetchMovieDetails(movieID: movie.id)
-                    }
-                }
-                for await detail in group {
-                    if let detail = detail {
-                        for genre in detail.genres {
-                            genreFrequency[genre.id, default: 0] += 1
-                        }
-                    }
-                }
-            }
-            for favorite in userPreferences.favoriteGenres {
-                if let genreId = genreMapping[favorite] {
-                    genreFrequency[genreId, default: 0] += 2
-                }
-            }
-        }
-        
-        // Extra bonus for prioritized genres
-        for prioritized in userPreferences.prioritizedGenres {
-            if let genreId = genreMapping[prioritized] {
-                genreFrequency[genreId, default: 0] += 2
-            }
-        }
-        
-        let topGenres = genreFrequency.sorted { $0.value > $1.value }
-            .prefix(3)
-            .map { $0.key }
-        
-        guard !topGenres.isEmpty else {
-            recommendedMovies = []
-            return
-        }
-        
-        var discoveredMovies: [MovieSearchItem] = []
-        do {
-            discoveredMovies = try await APIService.shared.fetchMoviesByGenres(
-                genreIDs: topGenres,
-                minRating: userPreferences.minRating
-            )
-        } catch {
-            print("Error fetching discovered movies: \(error)")
-        }
-        
-        let bookmarkedIDs = Set(watchlistMovies.map { $0.id })
-        discoveredMovies = discoveredMovies.filter { !bookmarkedIDs.contains($0.id) }
-        
-        /* Filter movies based on user preferences and calculate bonus score.
-         Added complexity to the business logic: If a user has a movie in bookmarks that matches on of their preferred genre(s), give an extra bonus for that. */
-        var scoredMovies: [(movie: MovieSearchItem, score: Int)] = []
-        await withTaskGroup(of: (MovieSearchItem, Int)?.self) { group in
-            for movie in discoveredMovies {
-                group.addTask { [weak self] in
-                    guard self != nil else { return nil }
-                    do {
-                        let detail = try await APIService.shared.fetchMovieDetails(movieID: movie.id)
-                        let meetsRating = detail.voteAverage >= userPreferences.minRating
-                        let matchingFavoriteGenres = detail.genres.filter { userPreferences.favoriteGenres.contains($0.name) }
-                        let hasFavoriteGenre = !matchingFavoriteGenres.isEmpty
-                        let bonusScore = matchingFavoriteGenres.count > 1 ? matchingFavoriteGenres.count - 1 : 0
-                        if meetsRating && (hasFavoriteGenre || userPreferences.favoriteGenres.isEmpty) {
-                            return (movie, bonusScore)
-                        } else {
-                            return nil
-                        }
-                    } catch {
-                        return nil
-                    }
-                }
-            }
-            
-            for await result in group {
-                if let (movie, score) = result {
-                    scoredMovies.append((movie, score))
-                }
-            }
-        }
-        
-        scoredMovies.sort { $0.score > $1.score }
-        recommendedMovies = scoredMovies.prefix(20).map { $0.movie }
-        
-        await fetchRecommendationImages(for: recommendedMovies)
-    }
-    */
-    // Refactored fetchRecommendationImages responsible for downloading images, fetchrecommendation can now focus solely on reocmmending mvoies
+    
+    // Refactored fetchRecommendationImages responsible for downloading images
     func fetchRecommendationImages(for movies: [MovieSearchItem]) async {
         await withTaskGroup(of: (Int, Data?).self) { group in
             for movie in movies {
@@ -309,8 +199,8 @@ class HomeViewModel {
                 }
             }
             for await (movieId, data) in group {
-                if let data = data {
-                    recommendationImages[movieId] = data
+                if data != nil {
+                    recommendationImages.removeValue(forKey: movieId)
                 }
             }
         }
@@ -346,14 +236,15 @@ extension HomeViewModel {
         do {
             discoveredMovies = try await fetchDiscoveredMovies(topGenres: topGenresIDs, minRating: userPreferences.minRating)
         } catch {
+            print("Error fetching discovered movies: \(error)")
+            recommendedMovies = []
+            return
         }
         
         // Remove movies already bookmarked.
         let filteredMovies = filterBookmarked(discovered: discoveredMovies, watchlist: watchlist)
         
         let scoredMovies = await scoreMovies(for: filteredMovies, using: userPreferences)
-        for (movie, score) in scoredMovies {
-        }
         
         // Sort scored movies and take the top 20 recommendations.
         recommendedMovies = scoredMovies.sorted { $0.score > $1.score }
@@ -364,8 +255,7 @@ extension HomeViewModel {
         
     }
     
-    
-    /// MARK: - Helper Functions
+//----------------------------------------------------------------------------------------------------------------------------------------//
     
     // Retrieves user preferences from the persistent storage.
     func getUserPreferences(context: ModelContext) async -> UserPreferences {
@@ -431,7 +321,7 @@ extension HomeViewModel {
                 frequency[genreId, default: 0] += 1
             }
         }
-        
+        print("FREQUENCY::: \(frequency)")
         return frequency
     }
 

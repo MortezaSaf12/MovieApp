@@ -76,14 +76,14 @@ struct HomeContentView: View {
             .toolbarBackground(ThemeConstants.Colors.background, for: .navigationBar)
             .toolbarColorScheme(.dark)
             .searchable(text: $searchText)
-            .onChange(of: searchText) { oldValue, newValue in
-                if newValue.isEmpty {
+            .onChange(of: searchText) {
+                if searchText.isEmpty {
                     viewModel.searchResults = []
                 } else {
-                    viewModel.handleSearch(text: newValue)
+                    viewModel.handleSearch(text: searchText)
                 }
             }
-            .onChange(of: viewModel.selectedGenre) { oldValue, newValue in
+            .onChange(of: viewModel.selectedGenre) {
                 if !searchText.isEmpty {
                     viewModel.handleSearch(text: searchText)
                 } else {
