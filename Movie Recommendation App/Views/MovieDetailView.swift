@@ -51,6 +51,21 @@ struct MovieDetailView: View {
                             .foregroundColor(.secondary)
                             .foregroundColor(ThemeConstants.Colors.text)
                             
+                            if !movie.genres.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(movie.genres) { genre in
+                                            Text(genre.name)
+                                                .font(.caption)
+                                                .padding(6)
+                                                .background(ThemeConstants.Colors.cardBackground)
+                                                .foregroundColor(ThemeConstants.Colors.text)
+                                                .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                            }
+                            
                             Text("About Movie")
                                 .font(.headline)
                                 .foregroundColor(ThemeConstants.Colors.text)

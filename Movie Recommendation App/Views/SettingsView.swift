@@ -110,7 +110,9 @@ struct SettingsView: View {
     private func updatePreferences() {
         if let prefs = userPreferences.first {
             prefs.favoriteGenres = Array(selectedGenres)
+            prefs.prioritizedGenres = Array(prioritizedGenres)
             prefs.minRating = minRating
+            print("Saving preferences -> Favorites: \(prefs.favoriteGenres), Prioritized: \(prefs.prioritizedGenres), MinRating: \(prefs.minRating)")
             try? context.save()
         }
     }

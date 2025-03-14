@@ -8,7 +8,8 @@
 import SwiftUI
 import Foundation
 
-//CHATGPT!
+// WARNING: This entire UI colors and constants is from Claude (Source: "https://claude.ai/share/6d95db8d-92ae-4af5-b1d2-a0ceaf5770b7")
+// Only the file ThemeConstants.swift was used from the prompt
 
 struct ThemeConstants {
     // MARK: - Colors
