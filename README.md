@@ -24,26 +24,7 @@ The app uses a sophisticated multi-factor algorithm:
 SwiftUI, SwiftData, Swift Concurrency, TMDb API, MVVM Architecture
 
 ## MVVM Architecture
-
-### Models
-- `MovieDetail` - Full movie information
-- `MovieSearchItem` - Lightweight movie data for lists
-- `MovieReview` - User reviews and ratings
-- `UserPreferences` - User settings (SwiftData)
-- `WatchlistMovie` - Bookmarked movies (SwiftData)
-
-### ViewModels
-- `HomeViewModel` - Main screen logic and recommendation engine
-- `MovieDetailViewModel` - Movie details and bookmark management
-- `ReviewsViewModel` - Reviews fetching
-- `WatchlistViewModel` - Bookmark list management
-
-### Views
-- `HomeView` - Tab-based navigation
-- `MovieDetailView` - Detailed movie information
-- `WatchlistView` - Saved movies grid
-- `SettingsView` - User preferences configuration
-- `ReviewsView` - Movie reviews display
+Models, ViewModels, Views
 
 ### Services
 - `APIService` - TMDb API integration with async/await
