@@ -33,7 +33,7 @@ except ImportError:
 # ──────────────────────────────────────────────
 MODEL = "claude-sonnet-4-5-20250929"
 TEMPERATURE = 0.0
-MAX_OUTPUT_TOKENS = 4096
+MAX_OUTPUT_TOKENS = 8192
 
 # Pricing (USD per token)
 INPUT_COST_PER_TOKEN = 3.0 / 1_000_000
