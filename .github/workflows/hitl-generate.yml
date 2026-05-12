@@ -85,10 +85,13 @@ jobs:
           echo "test_result=$?" >> $GITHUB_OUTPUT
 
       - name: Commit generated tests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="hitl/${{ github.event.inputs.feature_name }}-iter${{ github.event.inputs.iteration }}"
           git config user.name "HITL Bot"
           git config user.email "hitl-bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
           git checkout -b "$BRANCH"
           OUTPUT_PATH="${{ github.event.inputs.output_path }}"
           git add "$OUTPUT_PATH"
