@@ -7,15 +7,22 @@ on:
   workflow_dispatch:
     inputs:
       feature_query:
-        description: 'RAG query. Example: "movie recommendations genre frequency scoring"'
+        description: >
+          Descriptive query for RAG retrieval. Use natural language, not
+          function names. Example: "movie recommendations genre frequency
+          scoring filtering watchlist"
         required: true
         type: string
       feature_name:
-        description: 'Feature name. Example: "fetchRecommendations"'
+        description: >
+          Short feature name (used for branch name and test file name).
+          Example: "fetchRecommendations"
         required: true
         type: string
       output_path:
-        description: 'Output path. Example: "Movie Recommendation AppTests/Generated_FetchRecommendationsTests.swift"'
+        description: >
+          Path for the generated test file.
+          Example: "Movie Recommendation AppTests/Generated_FetchRecommendationsTests.swift"
         required: true
         type: string
       top_k:
@@ -24,12 +31,14 @@ on:
         type: number
         default: 5
       feedback:
-        description: "Feedback from a rejected previous attempt (leave empty for first run)"
+        description: >
+          Optional: human feedback from a rejected previous attempt.
+          Leave empty for first-time generation.
         required: false
         type: string
         default: ""
       iteration:
-        description: "Iteration number (increment after each rejection)"
+        description: "Iteration number (1 = first attempt, 2+ = re-generation after feedback)"
         required: false
         type: number
         default: 1
@@ -53,7 +62,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install anthropic sentence-transformers pinecone
 
-      - name: Generate tests
+      - name: Generate tests via RAG + Claude
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
@@ -84,7 +93,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO 2>&1 | tail -50
           echo "test_result=$?" >> $GITHUB_OUTPUT
 
-      - name: Commit generated tests
+      - name: Create branch and commit generated tests
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -101,53 +110,49 @@ jobs:
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
       - name: Build PR body
-        id: pr_body
         run: |
-          META=$(cat hitl_logs/last_run_metadata.json)
-          TOKENS_IN=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['input_tokens'])")
-          TOKENS_OUT=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['output_tokens'])")
-          COST=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['cost_usd'])")
-          CUMULATIVE=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['cumulative_cost_usd'])")
-          PROMPT_VER=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['system_prompt_version'])")
-          STOP=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['stop_reason'])")
-          FILES=$(echo "$META" | python3 -c "import sys,json; print('\n'.join(['- ' + f for f in json.load(sys.stdin)['retrieved_files']]))")
-          TEST_STATUS=${{ steps.test_run.outcome == 'success' && '"passed"' || '"failed (see build log)"' }}
+          python3 - "${{ steps.test_run.outcome }}" \
+                    "${{ github.event.inputs.feature_name }}" \
+                    "${{ github.event.inputs.feature_query }}" \
+                    "${{ github.event.inputs.iteration }}" << 'PYEOF'
+          import json, sys, textwrap
 
-          cat > pr_body.md << 'PREOF'
-          ## Generated Tests — Review Required
+          test_outcome, feature, query, iteration = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
-          **Feature:** `${{ github.event.inputs.feature_name }}`
-          **Iteration:** ${{ github.event.inputs.iteration }}
-          **Query:** `${{ github.event.inputs.feature_query }}`
-          **Prompt version:** `PROMPT_VER_PLACEHOLDER`
-          **Build:** TEST_STATUS_PLACEHOLDER
+          with open("hitl_logs/last_run_metadata.json") as f:
+              m = json.load(f)
+
+          files = "\n".join(f"- `{f}`" for f in m["retrieved_files"])
+          test_status = "passed" if test_outcome == "success" else "failed (see build log)"
+
+          body = f"""## Generated Tests — Review Required
+
+          **Feature:** `{feature}`
+          **Iteration:** {iteration}
+          **Query:** `{query}`
+          **Prompt version:** `{m['system_prompt_version']}`
+          **Build:** {test_status}
 
           ### Retrieved source files
-          FILES_PLACEHOLDER
+          {files}
 
           ### Cost
           | Metric | Value |
           |--------|-------|
-          | Input tokens | TOKENS_IN_PLACEHOLDER |
-          | Output tokens | TOKENS_OUT_PLACEHOLDER |
-          | This call | $COST_PLACEHOLDER |
-          | Cumulative | $CUMULATIVE_PLACEHOLDER |
-          | Stop reason | STOP_PLACEHOLDER |
+          | Input tokens | {m['input_tokens']} |
+          | Output tokens | {m['output_tokens']} |
+          | This call | ${m['cost_usd']} |
+          | Cumulative | ${m['cumulative_cost_usd']} |
+          | Stop reason | {m['stop_reason']} |
 
           ### Next steps
           - Merge if the tests are correct.
           - Close with a comment describing what to fix, then re-trigger with the feedback field filled in and iteration incremented.
+          """
 
-          PREOF
-
-          sed -i '' "s|PROMPT_VER_PLACEHOLDER|$PROMPT_VER|" pr_body.md
-          sed -i '' "s|TEST_STATUS_PLACEHOLDER|$TEST_STATUS|" pr_body.md
-          sed -i '' "s|FILES_PLACEHOLDER|$FILES|" pr_body.md
-          sed -i '' "s|TOKENS_IN_PLACEHOLDER|$TOKENS_IN|" pr_body.md
-          sed -i '' "s|TOKENS_OUT_PLACEHOLDER|$TOKENS_OUT|" pr_body.md
-          sed -i '' "s|COST_PLACEHOLDER|$COST|" pr_body.md
-          sed -i '' "s|CUMULATIVE_PLACEHOLDER|$CUMULATIVE|" pr_body.md
-          sed -i '' "s|STOP_PLACEHOLDER|$STOP|" pr_body.md
+          with open("pr_body.md", "w") as f:
+              f.write(textwrap.dedent(body))
+          PYEOF
 
       - name: Open Pull Request
         env:
