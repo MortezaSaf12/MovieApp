@@ -1,5 +1,8 @@
 name: HITL – Generate Tests
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   workflow_dispatch:
     inputs:
@@ -35,8 +38,6 @@ jobs:
   generate-and-pr:
     name: Generate Tests & Open PR
     runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
