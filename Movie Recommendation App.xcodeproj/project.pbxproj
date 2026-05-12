@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7E236FD22FB237840038F193 /* rag_index.py in Resources */ = {isa = PBXBuildFile; fileRef = 7E236FD12FB237840038F193 /* rag_index.py */; };
+		7E236FD42FB237840038F193 /* rag_retrieve.py in Resources */ = {isa = PBXBuildFile; fileRef = 7E236FD32FB237840038F193 /* rag_retrieve.py */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7EEA4DFC2D5822B8000A3474 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +29,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7E236FD12FB237840038F193 /* rag_index.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = rag_index.py; sourceTree = "<group>"; };
+		7E236FD32FB237840038F193 /* rag_retrieve.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = rag_retrieve.py; sourceTree = "<group>"; };
 		7EEA4DEB2D5822B7000A3474 /* Movie Recommendation App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Movie Recommendation App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EEA4DFB2D5822B8000A3474 /* Movie Recommendation AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Recommendation AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EEA4E052D5822B8000A3474 /* Movie Recommendation AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Movie Recommendation AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -79,6 +86,8 @@
 				7EEA4DFE2D5822B8000A3474 /* Movie Recommendation AppTests */,
 				7EEA4E082D5822B8000A3474 /* Movie Recommendation AppUITests */,
 				7EEA4DEC2D5822B7000A3474 /* Products */,
+				7E236FD12FB237840038F193 /* rag_index.py */,
+				7E236FD32FB237840038F193 /* rag_retrieve.py */,
 			);
 			sourceTree = "<group>";
 		};
@@ -212,6 +221,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7E236FD42FB237840038F193 /* rag_retrieve.py in Resources */,
+				7E236FD22FB237840038F193 /* rag_index.py in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

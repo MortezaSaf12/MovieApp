@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# HITL logs (contain prompts + generated code — commit selectively)
+hitl_logs/
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xcresult

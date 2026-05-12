@@ -1,0 +1,188 @@
+name: HITL – Generate & Review Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: "RAG query (recommended) — e.g. 'movie recommendations genre scoring'"
+        required: false
+        default: ""
+      source:
+        description: "Manual mode — path to source file (overrides RAG)"
+        required: false
+        default: ""
+      output:
+        description: "Output path for the generated test file"
+        required: true
+        default: "Movie Recommendation AppTests/Generated_Tests.swift"
+      feature:
+        description: "Feature name/description to test"
+        required: true
+        default: "fetchRecommendations"
+      reference:
+        description: "Existing test file for style reference (optional)"
+        required: false
+        default: ""
+      feedback:
+        description: "Human feedback from a previously rejected PR (optional)"
+        required: false
+        default: ""
+      top_k:
+        description: "Number of source files to retrieve via RAG"
+        required: false
+        default: "5"
+      iteration:
+        description: "Iteration number (increment when re-running after feedback)"
+        required: false
+        default: "1"
+
+jobs:
+  generate:
+    name: Generate Swift Tests
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install anthropic pinecone-client openai
+
+      - name: Run generate_tests.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          ARGS="--output \"${{ inputs.output }}\" --feature \"${{ inputs.feature }}\""
+          ARGS="$ARGS --top-k ${{ inputs.top_k }} --iteration ${{ inputs.iteration }}"
+
+          if [ -n "${{ inputs.query }}" ]; then
+            ARGS="$ARGS --query \"${{ inputs.query }}\""
+          elif [ -n "${{ inputs.source }}" ]; then
+            ARGS="$ARGS --source \"${{ inputs.source }}\""
+          else
+            echo "ERROR: Provide either 'query' (RAG) or 'source' (manual)."
+            exit 1
+          fi
+
+          [ -n "${{ inputs.reference }}" ] && ARGS="$ARGS --reference \"${{ inputs.reference }}\""
+          [ -n "${{ inputs.feedback }}" ] && ARGS="$ARGS --feedback \"${{ inputs.feedback }}\""
+
+          eval python3 generate_tests.py $ARGS
+
+      - name: Upload generated test file
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-tests
+          path: ${{ inputs.output }}
+          retention-days: 30
+
+      - name: Upload interaction logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hitl-logs
+          path: hitl_logs/
+          retention-days: 90
+
+      - name: Read last-run metadata
+        id: meta
+        run: |
+          if [ -f hitl_logs/last_run_metadata.json ]; then
+            echo "metadata=$(cat hitl_logs/last_run_metadata.json | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Select latest stable Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Resolve Swift packages
+        run: |
+          cd "Movie Recommendation App"
+          xcodebuild -resolvePackageDependencies \
+            -project "Movie Recommendation App.xcodeproj" \
+            -scheme "Movie Recommendation App"
+
+      - name: Compile generated tests
+        run: |
+          cd "Movie Recommendation App"
+          xcodebuild build-for-testing \
+            -project "Movie Recommendation App.xcodeproj" \
+            -scheme "Movie Recommendation App" \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+            CODE_SIGNING_ALLOWED=NO | xcpretty --color
+
+      - name: Create pull request for human review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="hitl/generated-tests-iter${{ inputs.iteration }}-$(date +%Y%m%d%H%M%S)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "${{ inputs.output }}" hitl_logs/ || true
+          git commit -m "test: generated tests for '${{ inputs.feature }}' (iter ${{ inputs.iteration }})"
+          git push origin "$BRANCH"
+
+          # Build PR body from metadata
+          COST=$(python3 -c "
+          import json, sys
+          try:
+              m = json.load(open('hitl_logs/last_run_metadata.json'))
+              print(f\"\${m['cost_usd']:.4f} (cumulative: \${m['cumulative_cost_usd']:.4f})\")
+          except Exception as e:
+              print('n/a')
+          ")
+          TOKENS=$(python3 -c "
+          import json, sys
+          try:
+              m = json.load(open('hitl_logs/last_run_metadata.json'))
+              print(f\"{m['input_tokens']} in / {m['output_tokens']} out\")
+          except Exception as e:
+              print('n/a')
+          ")
+          RETRIEVED=$(python3 -c "
+          import json, sys
+          try:
+              m = json.load(open('hitl_logs/last_run_metadata.json'))
+              print(', '.join(m.get('retrieved_files', [])) or 'n/a')
+          except Exception as e:
+              print('n/a')
+          ")
+
+          gh pr create \
+            --title "test(hitl): ${{ inputs.feature }} — iteration ${{ inputs.iteration }}" \
+            --body "$(cat <<'EOF'
+          ## HITL Test Generation — Human Review Required
+
+          | Field | Value |
+          |-------|-------|
+          | Feature | \`${{ inputs.feature }}\` |
+          | Iteration | ${{ inputs.iteration }} |
+          | Model | claude-sonnet-4-5-20250929 |
+          | Query | ${{ inputs.query }} |
+          | Output | \`${{ inputs.output }}\` |
+          | Retrieved files | $RETRIEVED |
+          | Tokens | $TOKENS |
+          | Cost | $COST |
+
+          ## Review checklist
+          - [ ] Tests use Swift Testing (`import Testing`, `@Test`, `#expect`)
+          - [ ] No XCTest APIs used
+          - [ ] Tests cover normal behavior, edge cases, and error handling
+          - [ ] Assertions check specific values (not just non-nil)
+          - [ ] Each test is independent
+
+          ## To request changes
+          Close this PR and re-run the workflow with `--feedback` describing what to fix and `--iteration` incremented by 1.
+
+          ---
+          *Generated by the HITL workflow. Approve to merge, or close with feedback.*
+          EOF
+          )" \
+            --head "$BRANCH" \
+            --base main
