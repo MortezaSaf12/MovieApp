@@ -35,6 +35,8 @@ jobs:
   generate-and-pr:
     name: Generate Tests & Open PR
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -87,8 +89,9 @@ jobs:
           git config user.name "HITL Bot"
           git config user.email "hitl-bot@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add "${{ github.event.inputs.output_path }}"
-          git add hitl_logs/
+          OUTPUT_PATH="${{ github.event.inputs.output_path }}"
+          git add "$OUTPUT_PATH"
+          git add -f hitl_logs/
           git commit -m "test(hitl): generate tests for ${{ github.event.inputs.feature_name }} [iter ${{ github.event.inputs.iteration }}]"
           git push origin "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
