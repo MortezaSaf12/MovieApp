@@ -90,6 +90,15 @@ jobs:
       - name: Install Python dependencies
         run: pip install anthropic sentence-transformers pinecone
 
+      - name: Log rejection decision
+        run: |
+          python3 hitl_logger.py log-decision \
+            --feature "${{ steps.meta.outputs.feature }}" \
+            --iteration $(( ${{ steps.meta.outputs.iteration }} - 1 )) \
+            --decision "reject" \
+            --feedback "${{ steps.feedback.outputs.feedback }}" \
+            --pr-number ${{ steps.pr_info.outputs.pr_number }}
+
       - name: Generate tests with feedback
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -135,6 +144,25 @@ jobs:
           git commit -m "test(hitl): regenerate ${{ steps.meta.outputs.feature }} [iter ${{ steps.meta.outputs.iteration }}] with feedback"
           git push origin "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Sync budget to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/hitl_sync
+          cp hitl_logs/budget_tracker.json /tmp/hitl_sync/ 2>/dev/null || true
+          cp hitl_logs/interactions.jsonl /tmp/hitl_sync/ 2>/dev/null || true
+          git checkout main
+          git pull origin main
+          mkdir -p hitl_logs
+          cp /tmp/hitl_sync/budget_tracker.json hitl_logs/ 2>/dev/null || true
+          cp /tmp/hitl_sync/interactions.jsonl hitl_logs/ 2>/dev/null || true
+          git config user.name "HITL Bot"
+          git config user.email "hitl-bot@users.noreply.github.com"
+          git add -f hitl_logs/budget_tracker.json hitl_logs/interactions.jsonl
+          git diff --staged --quiet || git commit -m "log(hitl): sync budget after generation"
+          git push origin main
+          git checkout "$BRANCH"
 
       - name: Build PR body
         run: |
