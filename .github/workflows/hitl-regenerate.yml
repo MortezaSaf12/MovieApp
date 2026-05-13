@@ -1,0 +1,214 @@
+name: HITL – Regenerate on Feedback
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  regenerate:
+    name: Regenerate Tests from Feedback
+    if: >
+      github.event.issue.pull_request
+      && startsWith(github.event.comment.body, '/regenerate')
+      && contains(toJSON(github.event.issue.labels.*.name), 'hitl-generated')
+    runs-on: macos-latest
+
+    steps:
+      - name: Extract feedback
+        id: feedback
+        run: |
+          COMMENT=$(cat <<'COMMENT_EOF'
+          ${{ github.event.comment.body }}
+          COMMENT_EOF
+          )
+          FEEDBACK=$(echo "$COMMENT" | sed 's|^/regenerate\s*||')
+          echo "feedback=$FEEDBACK" >> $GITHUB_OUTPUT
+
+      - name: Get PR branch
+        id: pr_info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER)
+          HEAD_BRANCH=$(echo "$PR_DATA" | python3 -c "import sys,json; print(json.load(sys.stdin)['head']['ref'])")
+          echo "branch=$HEAD_BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr_info.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Read previous metadata
+        id: meta
+        run: |
+          if [ ! -f hitl_logs/last_run_metadata.json ]; then
+            echo "ERROR: No metadata file found on branch ${{ steps.pr_info.outputs.branch }}"
+            exit 1
+          fi
+
+          META=$(cat hitl_logs/last_run_metadata.json)
+          FEATURE=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['feature'])")
+          QUERY=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin).get('query',''))")
+          OUTPUT=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['output_path'])")
+          PREV_ITER=$(echo "$META" | python3 -c "import sys,json; print(json.load(sys.stdin)['iteration'])")
+          NEXT_ITER=$((PREV_ITER + 1))
+
+          echo "feature=$FEATURE" >> $GITHUB_OUTPUT
+          echo "query=$QUERY" >> $GITHUB_OUTPUT
+          echo "output=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "iteration=$NEXT_ITER" >> $GITHUB_OUTPUT
+
+      - name: Check iteration limit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MAX_ITERATIONS=5
+          ITER=${{ steps.meta.outputs.iteration }}
+          if [ "$ITER" -gt "$MAX_ITERATIONS" ]; then
+            gh pr comment ${{ steps.pr_info.outputs.pr_number }} \
+              --body "Max iterations ($MAX_ITERATIONS) reached for '${{ steps.meta.outputs.feature }}'. Further regeneration is blocked to protect the API budget."
+            exit 1
+          fi
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install anthropic sentence-transformers pinecone
+
+      - name: Generate tests with feedback
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          python3 generate_tests.py \
+            --query "${{ steps.meta.outputs.query }}" \
+            --output "${{ steps.meta.outputs.output }}" \
+            --feature "${{ steps.meta.outputs.feature }}" \
+            --reference "Movie Recommendation AppTests/Movie_Recommendation_AppTests.swift" \
+            --top-k 5 \
+            --iteration ${{ steps.meta.outputs.iteration }} \
+            --feedback "${{ steps.feedback.outputs.feedback }}"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Build and test
+        id: test_run
+        continue-on-error: true
+        run: |
+          xcodebuild test \
+            -project "Movie Recommendation App.xcodeproj" \
+            -scheme "Movie Recommendation App" \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+            -only-testing:"Movie Recommendation AppTests" \
+            -resultBundlePath TestResults.xcresult \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -50
+
+      - name: Create branch and commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="hitl/${{ steps.meta.outputs.feature }}-iter${{ steps.meta.outputs.iteration }}"
+          git config user.name "HITL Bot"
+          git config user.email "hitl-bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
+          git checkout -b "$BRANCH"
+          OUTPUT_PATH="${{ steps.meta.outputs.output }}"
+          git add "$OUTPUT_PATH"
+          git add -f hitl_logs/
+          git commit -m "test(hitl): regenerate ${{ steps.meta.outputs.feature }} [iter ${{ steps.meta.outputs.iteration }}] with feedback"
+          git push origin "$BRANCH"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Build PR body
+        run: |
+          python3 - "${{ steps.test_run.outcome }}" \
+                    "${{ steps.meta.outputs.feature }}" \
+                    "${{ steps.meta.outputs.iteration }}" \
+                    "${{ steps.pr_info.outputs.pr_number }}" \
+                    "${{ steps.feedback.outputs.feedback }}" << 'PYEOF'
+          import json, sys, textwrap
+
+          test_outcome, feature, iteration, prev_pr, feedback = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+
+          with open("hitl_logs/last_run_metadata.json") as f:
+              m = json.load(f)
+
+          files = "\n".join(f"- `{f}`" for f in m["retrieved_files"])
+          test_status = "passed" if test_outcome == "success" else "failed (see build log)"
+
+          body = f"""## Generated Tests — Review Required (Iteration {iteration})
+
+          **Feature:** `{feature}`
+          **Iteration:** {iteration}
+          **Previous PR:** #{prev_pr}
+          **Build:** {test_status}
+
+          ### Feedback applied
+          > {feedback}
+
+          ### Retrieved source files
+          {files}
+
+          ### Cost
+          | Metric | Value |
+          |--------|-------|
+          | Input tokens | {m['input_tokens']} |
+          | Output tokens | {m['output_tokens']} |
+          | This call | ${m['cost_usd']} |
+          | Cumulative | ${m['cumulative_cost_usd']} |
+          | Stop reason | {m['stop_reason']} |
+
+          ### Next steps
+          - Merge if the tests are correct.
+          - Comment `/regenerate <feedback>` to iterate again.
+          - Close if not salvageable.
+          """
+
+          with open("pr_body.md", "w") as f:
+              f.write(textwrap.dedent(body))
+          PYEOF
+
+      - name: Open Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "test(hitl): ${{ steps.meta.outputs.feature }} [iter ${{ steps.meta.outputs.iteration }}]" \
+            --body-file pr_body.md \
+            --label "hitl-generated"
+
+      - name: Close previous PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
+          gh pr comment ${{ steps.pr_info.outputs.pr_number }} \
+            --body "Regenerated as #$NEW_PR based on your feedback."
+          gh pr close ${{ steps.pr_info.outputs.pr_number }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-iter${{ steps.meta.outputs.iteration }}
+          path: TestResults.xcresult
+          retention-days: 30
